@@ -49,10 +49,15 @@ services:
 
   # ─── BACKEND SERVICES ───────────────────────────────────────────────────────
   # Build context is always ../backend so each Dockerfile can COPY shared/
+  # All backend services use the single backend/Dockerfile
+  # Only SERVICE build arg and port differ between them
+
   api-gateway:
     build:
       context: ../backend
-      dockerfile: api-gateway/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        SERVICE: api-gateway
     container_name: sel_api_gateway
     ports:
       - "3000:3000"
@@ -65,7 +70,9 @@ services:
   auth-service:
     build:
       context: ../backend
-      dockerfile: auth-service/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        SERVICE: auth-service
     container_name: sel_auth
     ports:
       - "3001:3001"
@@ -78,7 +85,9 @@ services:
   course-service:
     build:
       context: ../backend
-      dockerfile: course-service/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        SERVICE: course-service
     container_name: sel_course
     ports:
       - "3003:3003"
@@ -90,7 +99,9 @@ services:
   ai-service:
     build:
       context: ../backend
-      dockerfile: ai-service/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        SERVICE: ai-service
     container_name: sel_ai
     ports:
       - "3004:3004"
@@ -102,7 +113,9 @@ services:
   quiz-service:
     build:
       context: ../backend
-      dockerfile: quiz-service/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        SERVICE: quiz-service
     container_name: sel_quiz
     ports:
       - "3005:3005"
@@ -114,7 +127,9 @@ services:
   gamification-service:
     build:
       context: ../backend
-      dockerfile: gamification-service/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        SERVICE: gamification-service
     container_name: sel_gamification
     ports:
       - "3006:3006"
@@ -127,7 +142,9 @@ services:
   tutor-service:
     build:
       context: ../backend
-      dockerfile: tutor-service/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        SERVICE: tutor-service
     container_name: sel_tutor
     ports:
       - "3007:3007"
@@ -139,7 +156,9 @@ services:
   payment-service:
     build:
       context: ../backend
-      dockerfile: payment-service/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        SERVICE: payment-service
     container_name: sel_payment
     ports:
       - "3008:3008"
@@ -151,7 +170,9 @@ services:
   notification-service:
     build:
       context: ../backend
-      dockerfile: notification-service/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        SERVICE: notification-service
     container_name: sel_notification
     ports:
       - "3010:3010"
@@ -164,7 +185,9 @@ services:
   admin-service:
     build:
       context: ../backend
-      dockerfile: admin-service/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        SERVICE: admin-service
     container_name: sel_admin
     ports:
       - "3011:3011"
