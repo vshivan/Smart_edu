@@ -1,0 +1,43 @@
+# ─── Dependencies ────────────────────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+
+# ─── Environment / Secrets ───────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+infrastructure/.env
+
+# ─── Build outputs ───────────────────────────────────────────────────────────
+dist/
+build/
+.vite/
+frontend/dist/
+
+# ─── Logs ────────────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+
+# ─── OS files ────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Editor ──────────────────────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# ─── Docker volumes (if mounted locally) ─────────────────────────────────────
+postgres_data/
+mongo_data/
+redis_data/
+
+# ─── Certificates / uploads ──────────────────────────────────────────────────
+uploads/
+*.pem
+*.key
+*.cert

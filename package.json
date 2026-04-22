@@ -1,0 +1,24 @@
+{
+  "name": "smartedulear",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "setup":          "bash setup.sh",
+    "dev:frontend":   "npm run dev --prefix frontend",
+    "dev:auth":       "npm run dev --prefix backend/auth-service",
+    "dev:course":     "npm run dev --prefix backend/course-service",
+    "dev:ai":         "npm run dev --prefix backend/ai-service",
+    "dev:quiz":       "npm run dev --prefix backend/quiz-service",
+    "dev:gamify":     "npm run dev --prefix backend/gamification-service",
+    "dev:tutor":      "npm run dev --prefix backend/tutor-service",
+    "dev:payment":    "npm run dev --prefix backend/payment-service",
+    "dev:notify":     "npm run dev --prefix backend/notification-service",
+    "dev:admin":      "npm run dev --prefix backend/admin-service",
+    "dev:gateway":    "npm run dev --prefix backend/api-gateway",
+    "docker:up":      "docker-compose -f infrastructure/docker-compose.yml up -d",
+    "docker:down":    "docker-compose -f infrastructure/docker-compose.yml down",
+    "docker:logs":    "docker-compose -f infrastructure/docker-compose.yml logs -f",
+    "docker:db":      "docker-compose -f infrastructure/docker-compose.yml up -d postgres mongodb redis",
+    "db:migrate":     "psql $DATABASE_URL -f database/schema.sql"
+  }
+}
