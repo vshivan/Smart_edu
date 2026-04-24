@@ -1,0 +1,172 @@
+name: Deploy SmartEduLearn
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:   # allow manual trigger from GitHub UI
+
+jobs:
+  # ─── 1. Run Tests ────────────────────────────────────────────────────────────
+  test:
+    name: Run Test Suite
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB:       smartedulear_test
+          POSTGRES_USER:     sel_user
+          POSTGRES_PASSWORD: sel_pass
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mongodb:
+        image: mongo:7-jammy
+        ports: ["27017:27017"]
+        options: >-
+          --health-cmd "mongosh --eval \"db.adminCommand('ping')\""
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install server dependencies
+        run: npm install --legacy-peer-deps
+        working-directory: server
+
+      - name: Run tests
+        working-directory: server
+        env:
+          NODE_ENV:     test
+          PORT:         3001
+          DATABASE_URL: postgresql://sel_user:sel_pass@localhost:5432/smartedulear_test
+          MONGODB_URL:  mongodb://localhost:27017
+          REDIS_URL:    redis://localhost:6379
+          JWT_SECRET:   test_secret_for_ci_only_not_production
+          GEMINI_API_KEY: dummy
+          RAZORPAY_KEY_ID: rzp_test_dummy
+          RAZORPAY_KEY_SECRET: dummy_secret
+        run: npm test
+
+  # ─── 2. Build & Push Docker Images ───────────────────────────────────────────
+  build:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: test
+    outputs:
+      server_tag:   ${{ steps.meta_server.outputs.tags }}
+      frontend_tag: ${{ steps.meta_frontend.outputs.tags }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker metadata — server
+        id: meta_server
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/smartedulear-server
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest
+
+      - name: Docker metadata — frontend
+        id: meta_frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/smartedulear-frontend
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest
+
+      - name: Build & push server image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./server
+          push: true
+          tags: ${{ steps.meta_server.outputs.tags }}
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
+
+      - name: Build & push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ steps.meta_frontend.outputs.tags }}
+          build-args: |
+            VITE_API_URL=https://${{ secrets.PRODUCTION_DOMAIN }}/api
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
+
+  # ─── 3. Deploy to VPS ────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    environment: production   # requires manual approval in GitHub
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy docker-compose.prod.yml to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host:     ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key:      ${{ secrets.SSH_PRIVATE_KEY }}
+          source:   "docker-compose.prod.yml,nginx/nginx.prod.conf,database/schema.sql"
+          target:   "/opt/smartedulear"
+
+      - name: Deploy on server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:     ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key:      ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /opt/smartedulear
+
+            # Write production env file from GitHub secret
+            echo "${{ secrets.PRODUCTION_ENV }}" > .env.production
+
+            # Pull latest images
+            docker compose -f docker-compose.prod.yml pull server frontend
+
+            # Rolling restart — zero downtime
+            docker compose -f docker-compose.prod.yml up -d --no-deps server
+            sleep 10
+            docker compose -f docker-compose.prod.yml up -d --no-deps frontend
+
+            # Clean up old images
+            docker image prune -f
+
+            echo "✅ Deployment complete"

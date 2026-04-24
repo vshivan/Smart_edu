@@ -1,79 +1,73 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════════════════════
-# SmartEduLearn — One-command setup script
+# SmartEduLearn — One-command local setup
 # Usage: bash setup.sh
 # ════════════════════════════════════════════════════════════════════════════
 
 set -e
 
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m'
+GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
+log()  { echo -e "${GREEN}✓ $1${NC}"; }
+warn() { echo -e "${YELLOW}⚠ $1${NC}"; }
+err()  { echo -e "${RED}✗ $1${NC}"; exit 1; }
 
 echo -e "${GREEN}🎓 SmartEduLearn Setup${NC}"
-echo "================================"
+echo "════════════════════════════════"
 
-# 1. Check Node.js
-if ! command -v node &> /dev/null; then
-  echo -e "${RED}✗ Node.js not found. Install from https://nodejs.org (v20+)${NC}"
-  exit 1
-fi
-echo -e "${GREEN}✓ Node.js $(node -v)${NC}"
+# 1. Node.js check
+command -v node &>/dev/null || err "Node.js not found. Install v20+ from https://nodejs.org"
+log "Node.js $(node -v)"
 
-# 2. Check Docker
-if ! command -v docker &> /dev/null; then
-  echo -e "${YELLOW}⚠ Docker not found. You'll need to run databases manually.${NC}"
-  echo "  Install Docker Desktop: https://www.docker.com/products/docker-desktop/"
-  DOCKER_AVAILABLE=false
+# 2. Docker check
+if ! command -v docker &>/dev/null; then
+  warn "Docker not found — install from https://www.docker.com/products/docker-desktop/"
+  DOCKER=false
 else
-  echo -e "${GREEN}✓ Docker $(docker --version | cut -d' ' -f3)${NC}"
-  DOCKER_AVAILABLE=true
+  log "Docker $(docker --version | cut -d' ' -f3)"
+  DOCKER=true
 fi
 
-# 3. Copy .env if not exists
-if [ ! -f infrastructure/.env ]; then
-  cp infrastructure/.env.example infrastructure/.env
-  echo -e "${YELLOW}⚠ Created infrastructure/.env — FILL IN YOUR API KEYS before starting!${NC}"
-  echo "  Required: GEMINI_API_KEY, JWT_SECRET, GOOGLE_CLIENT_ID/SECRET"
+# 3. Create .env from example
+if [ ! -f .env ]; then
+  cp .env.example .env
+  warn "Created .env — fill in your keys before starting:"
+  echo "   Required: GEMINI_API_KEY"
+  echo "   Optional: CASHFREE_APP_ID, CASHFREE_SECRET_KEY, GMAIL_USER, GMAIL_APP_PASSWORD"
 else
-  echo -e "${GREEN}✓ infrastructure/.env already exists${NC}"
+  log ".env already exists"
 fi
 
-# 4. Install frontend dependencies
+# 4. Install dependencies
 echo ""
-echo "Installing frontend dependencies..."
-cd frontend && npm install && cd ..
-echo -e "${GREEN}✓ Frontend dependencies installed${NC}"
+echo "Installing dependencies..."
+npm install --prefix server --legacy-peer-deps --silent
+log "Server dependencies installed"
+npm install --prefix frontend --silent
+log "Frontend dependencies installed"
 
-# 5. Install backend dependencies
+# 5. Start
 echo ""
-echo "Installing backend service dependencies..."
-for service in api-gateway auth-service course-service ai-service quiz-service gamification-service tutor-service payment-service notification-service admin-service; do
-  if [ -f "backend/$service/package.json" ]; then
-    cd "backend/$service" && npm install && cd ../..
-    echo -e "${GREEN}✓ $service${NC}"
-  fi
-done
-
-# 6. Start databases
-if [ "$DOCKER_AVAILABLE" = true ]; then
+if [ "$DOCKER" = true ]; then
+  echo "Starting with Docker..."
+  docker compose up -d
+  log "All containers started"
   echo ""
-  echo "Starting databases (PostgreSQL, MongoDB, Redis)..."
-  cd infrastructure && docker-compose up -d postgres mongodb redis && cd ..
-  echo -e "${GREEN}✓ Databases started${NC}"
-  echo "  Waiting 5s for databases to be ready..."
-  sleep 5
+  echo -e "${GREEN}════════════════════════════════${NC}"
+  echo -e "${GREEN}✅ Ready!${NC}"
+  echo ""
+  echo "  Frontend → http://localhost:3000"
+  echo "  API      → http://localhost:3001"
+  echo "  Health   → http://localhost:3001/health"
+  echo ""
+  echo "  Logs:  docker compose logs -f"
+  echo "  Stop:  docker compose down"
+  echo -e "${GREEN}════════════════════════════════${NC}"
+else
+  echo -e "${GREEN}════════════════════════════════${NC}"
+  echo -e "${GREEN}✅ Dependencies installed!${NC}"
+  echo ""
+  echo "Start databases manually, then:"
+  echo "  npm run dev:server    (port 3001)"
+  echo "  npm run dev:frontend  (port 3000)"
+  echo -e "${GREEN}════════════════════════════════${NC}"
 fi
-
-echo ""
-echo -e "${GREEN}════════════════════════════════════════${NC}"
-echo -e "${GREEN}✅ Setup complete!${NC}"
-echo ""
-echo "Next steps:"
-echo "  1. Edit infrastructure/.env with your API keys"
-echo "  2. Start backend:  cd backend/auth-service && npm run dev"
-echo "     (repeat for each service, or use: npm run docker:up)"
-echo "  3. Start frontend: npm run dev:frontend"
-echo "  4. Open: http://localhost:5173"
-echo -e "${GREEN}════════════════════════════════════════${NC}"

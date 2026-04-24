@@ -4,40 +4,45 @@ node_modules/
 .pnp.js
 
 # ─── Environment / Secrets ───────────────────────────────────────────────────
+# NEVER commit real secrets
 .env
 .env.local
 .env.*.local
-infrastructure/.env
+.env.production
+server/.env
+frontend/.env.local
 
-# ─── Build outputs ───────────────────────────────────────────────────────────
+# frontend/.env.production is tracked — it only contains VITE_API_URL (no secrets)
+
+# ─── Build outputs ────────────────────────────────────────────────────────────
 dist/
 build/
 .vite/
 frontend/dist/
 
-# ─── Logs ────────────────────────────────────────────────────────────────────
+# ─── Logs ─────────────────────────────────────────────────────────────────────
 logs/
 *.log
 npm-debug.log*
+server/logs/
 
-# ─── OS files ────────────────────────────────────────────────────────────────
+# ─── OS / Editor ──────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 desktop.ini
-
-# ─── Editor ──────────────────────────────────────────────────────────────────
 .vscode/settings.json
 .idea/
 *.swp
 *.swo
 
-# ─── Docker volumes (if mounted locally) ─────────────────────────────────────
+# ─── Docker local volumes ─────────────────────────────────────────────────────
 postgres_data/
 mongo_data/
 redis_data/
 
-# ─── Certificates / uploads ──────────────────────────────────────────────────
+# ─── SSL / Uploads ────────────────────────────────────────────────────────────
 uploads/
+nginx/ssl/
 *.pem
 *.key
 *.cert

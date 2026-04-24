@@ -1,9 +1,11 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { BookOpen, Clock, Users, Star, CheckCircle, Lock } from 'lucide-react';
+import { BookOpen, Clock, Users, Star, Lock, CheckCircle, ArrowRight } from 'lucide-react';
 import api from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
+
+const difficultyStyle = { beginner: 'badge-green', intermediate: 'badge-yellow', advanced: 'badge-red' };
 
 export default function CourseDetail() {
   const { id } = useParams();
@@ -21,42 +23,47 @@ export default function CourseDetail() {
     onError: (e) => toast.error(e.response?.data?.message || 'Enrollment failed'),
   });
 
-  if (isLoading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" /></div>;
-  if (!course) return <div className="text-center text-gray-400 py-20">Course not found</div>;
+  if (isLoading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+  if (!course) return <div className="text-center text-text-muted py-20">Course not found</div>;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-12">
+    <div className="max-w-5xl mx-auto px-4 py-10">
       <div className="grid lg:grid-cols-3 gap-8">
+        {/* Main */}
         <div className="lg:col-span-2 space-y-6">
           <div>
-            <span className={`badge text-xs mb-3 ${course.difficulty === 'beginner' ? 'bg-green-600/10 text-green-400 border border-green-500/20' : 'bg-yellow-600/10 text-yellow-400 border border-yellow-500/20'}`}>{course.difficulty}</span>
-            <h1 className="text-3xl font-bold text-white mb-3">{course.title}</h1>
-            <p className="text-gray-400">{course.description}</p>
+            <span className={`${difficultyStyle[course.difficulty] || 'badge-gray'} mb-3`}>{course.difficulty}</span>
+            <h1 className="text-3xl font-bold text-text-primary mt-2 mb-3 tracking-tight">{course.title}</h1>
+            <p className="text-text-secondary leading-relaxed">{course.description}</p>
           </div>
 
-          <div className="flex flex-wrap gap-4 text-sm text-gray-400">
-            <span className="flex items-center gap-1.5"><Clock size={15} /> {course.estimated_hours}h</span>
-            <span className="flex items-center gap-1.5"><Users size={15} /> {course.total_enrolled} enrolled</span>
-            <span className="flex items-center gap-1.5 text-yellow-400"><Star size={15} fill="currentColor" /> {parseFloat(course.rating || 0).toFixed(1)}</span>
+          <div className="flex flex-wrap gap-4 text-sm text-text-muted">
+            <span className="flex items-center gap-1.5"><Clock size={14} /> {course.estimated_hours}h estimated</span>
+            <span className="flex items-center gap-1.5"><Users size={14} /> {course.total_enrolled} enrolled</span>
+            <span className="flex items-center gap-1.5 text-amber-500"><Star size={14} fill="currentColor" /> {parseFloat(course.rating || 0).toFixed(1)}</span>
           </div>
 
           {/* Modules */}
           <div>
-            <h2 className="text-lg font-semibold text-white mb-4">Course Content</h2>
+            <h2 className="section-title mb-4">Course Content</h2>
             <div className="space-y-3">
               {(course.modules || []).map((mod, i) => (
-                <div key={mod.id} className="card">
+                <div key={mod.id} className="card p-4">
                   <div className="flex items-center gap-3 mb-3">
-                    <span className="w-7 h-7 bg-brand-600/20 rounded-lg flex items-center justify-center text-brand-400 text-xs font-bold">{i + 1}</span>
-                    <h3 className="font-medium text-white">{mod.title}</h3>
-                    {mod.is_locked && !course.is_enrolled && <Lock size={14} className="text-gray-500 ml-auto" />}
+                    <span className="w-7 h-7 bg-brand-50 border border-brand-100 rounded-lg flex items-center justify-center text-brand-600 text-xs font-bold">{i + 1}</span>
+                    <h3 className="font-semibold text-text-primary text-sm">{mod.title}</h3>
+                    {mod.is_locked && !course.is_enrolled && <Lock size={13} className="text-text-muted ml-auto" />}
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     {(mod.lessons || []).filter(Boolean).map(lesson => (
-                      <div key={lesson.id} className="flex items-center gap-2 text-sm text-gray-400 py-1">
-                        <BookOpen size={13} />
+                      <div key={lesson.id} className="flex items-center gap-2 text-sm text-text-secondary py-1.5 border-t border-surface-border first:border-0">
+                        <BookOpen size={12} className="text-text-muted shrink-0" />
                         <span className="flex-1">{lesson.title}</span>
-                        <span className="text-xs text-gray-600">{lesson.duration_min}min</span>
+                        <span className="text-xs text-text-muted">{lesson.duration_min}min</span>
                       </div>
                     ))}
                   </div>
@@ -68,18 +75,32 @@ export default function CourseDetail() {
 
         {/* Sidebar */}
         <div className="lg:col-span-1">
-          <div className="card sticky top-24">
-            <div className="w-full h-40 bg-gradient-to-br from-brand-600/20 to-purple-600/20 rounded-xl mb-4 flex items-center justify-center">
-              <BookOpen size={40} className="text-brand-400" />
+          <div className="card sticky top-24 shadow-card-md">
+            <div className="w-full h-36 bg-gradient-to-br from-brand-50 to-violet-50 rounded-xl mb-4 flex items-center justify-center border border-brand-100">
+              <BookOpen size={36} className="text-brand-500" />
             </div>
-            <p className="text-2xl font-bold text-white mb-1">{course.is_free ? 'Free' : `$${course.price}`}</p>
+            <p className="text-2xl font-bold text-text-primary mb-1">
+              {course.is_free ? <span className="text-emerald-600">Free</span> : `$${course.price}`}
+            </p>
             {course.is_enrolled ? (
-              <button onClick={() => navigate(`/learn/${id}`)} className="btn-primary w-full py-3 mt-3">Continue Learning</button>
+              <div>
+                <div className="flex items-center gap-2 text-emerald-600 text-sm font-medium mb-3">
+                  <CheckCircle size={15} /> Already enrolled
+                </div>
+                <button onClick={() => navigate(`/learn/${id}`)} className="btn-primary w-full py-2.5 text-sm flex items-center justify-center gap-2">
+                  Continue Learning <ArrowRight size={15} />
+                </button>
+              </div>
             ) : (
-              <button onClick={() => token ? enrollMutation.mutate() : navigate('/login')} disabled={enrollMutation.isPending} className="btn-primary w-full py-3 mt-3">
+              <button
+                onClick={() => token ? enrollMutation.mutate() : navigate('/login')}
+                disabled={enrollMutation.isPending}
+                className="btn-primary w-full py-2.5 text-sm mt-2"
+              >
                 {enrollMutation.isPending ? 'Enrolling...' : 'Enroll Now'}
               </button>
             )}
+            <p className="text-xs text-text-muted text-center mt-3">Full lifetime access</p>
           </div>
         </div>
       </div>

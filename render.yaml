@@ -1,0 +1,108 @@
+# ════════════════════════════════════════════════════════════════════════════
+# SmartEduLearn — Render Blueprint
+# Deploys backend as a Web Service + managed Postgres + managed Redis
+# MongoDB → use MongoDB Atlas free tier (add MONGODB_URL manually)
+# ════════════════════════════════════════════════════════════════════════════
+
+services:
+  # ─── Backend Web Service ──────────────────────────────────────────────────
+  - type: web
+    name: smartedulear-server
+    runtime: node
+    region: singapore          # closest to India for Razorpay latency
+    plan: free                 # upgrade to Starter ($7/mo) for always-on
+    rootDir: server
+    buildCommand: npm install --legacy-peer-deps && node scripts/migrate.js
+    startCommand: node src/index.js
+    healthCheckPath: /health
+
+    envVars:
+      # ── App ──────────────────────────────────────────────────────────────
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000            # Render assigns this automatically
+
+      # ── Auth ─────────────────────────────────────────────────────────────
+      - key: JWT_SECRET
+        generateValue: true     # Render auto-generates a secure random value
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: REFRESH_EXPIRES_IN
+        value: 7d
+
+      # ── Postgres (auto-linked from database below) ────────────────────────
+      - key: DATABASE_URL
+        fromDatabase:
+          name: smartedulear-postgres
+          property: connectionString
+
+      # ── Redis (auto-linked from service below) ────────────────────────────
+      - key: REDIS_URL
+        fromService:
+          name: smartedulear-redis
+          type: redis
+          property: connectionString
+
+      # ── MongoDB Atlas — set manually in Render dashboard ──────────────────
+      - key: MONGODB_URL
+        sync: false
+        # Value: mongodb+srv://sel_user:PASSWORD@cluster.mongodb.net/smartedulear_ai
+
+      # ── Frontend URL — set after Vercel deploy ────────────────────────────
+      - key: FRONTEND_URL
+        sync: false
+        # Value: https://your-app.vercel.app
+      - key: ALLOWED_ORIGINS
+        sync: false
+        # Value: https://your-app.vercel.app
+
+      # ── Gemini AI ─────────────────────────────────────────────────────────
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-1.5-flash
+
+      # ── Pinecone (optional) ───────────────────────────────────────────────
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: PINECONE_INDEX
+        value: smartedulear-courses
+
+      # ── Cashfree Payments ─────────────────────────────────────────────────
+      - key: CASHFREE_APP_ID
+        sync: false
+      - key: CASHFREE_SECRET_KEY
+        sync: false
+      - key: CASHFREE_WEBHOOK_SECRET
+        sync: false
+
+      # ── Email — Gmail + Nodemailer ────────────────────────────────────────
+      - key: GMAIL_USER
+        sync: false
+      - key: GMAIL_APP_PASSWORD
+        sync: false
+
+      # ── Google OAuth (optional) ───────────────────────────────────────────
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
+        sync: false
+        # Value: https://smartedulear-server.onrender.com/auth/google/callback
+
+  # ─── Managed Redis ────────────────────────────────────────────────────────
+  - type: redis
+    name: smartedulear-redis
+    region: singapore
+    plan: free                  # 25MB RAM, no persistence on free tier
+    ipAllowList: []             # only accessible from Render internal network
+
+# ─── Managed PostgreSQL ───────────────────────────────────────────────────────
+databases:
+  - name: smartedulear-postgres
+    databaseName: smartedulear
+    user: sel_user
+    region: singapore
+    plan: free                  # 1GB storage, 97 connection limit
