@@ -12,8 +12,8 @@ services:
     region: singapore          # closest to India for Razorpay latency
     plan: free                 # upgrade to Starter ($7/mo) for always-on
     rootDir: server
-    buildCommand: npm install --legacy-peer-deps && node scripts/migrate.js
-    startCommand: node src/index.js
+    buildCommand: npm install --legacy-peer-deps
+    startCommand: node scripts/migrate.js && node src/index.js
     healthCheckPath: /health
 
     envVars:
