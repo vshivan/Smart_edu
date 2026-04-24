@@ -13,6 +13,7 @@ server/.env
 frontend/.env.local
 
 # frontend/.env.production is tracked — it only contains VITE_API_URL (no secrets)
+!frontend/.env.production
 
 # ─── Build outputs ────────────────────────────────────────────────────────────
 dist/
