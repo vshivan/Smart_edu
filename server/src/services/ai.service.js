@@ -1,6 +1,6 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { Pinecone } = require('@pinecone-database/pinecone');
-const ChatSession = require('../models/ChatSession');
+const { pool } = require('../config/db');
 const { AppError } = require('../utils/errors');
 
 // ─── GEMINI CLIENT ───────────────────────────────────────────────────────────
@@ -48,6 +48,47 @@ let pinecone;
 const getPinecone = () => {
   if (!pinecone) pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
   return pinecone;
+};
+
+// ─── CHAT SESSION HELPERS (PostgreSQL JSONB — no MongoDB) ────────────────────
+
+/**
+ * Load a chat session from PostgreSQL.
+ * Returns { id, learner_id, course_id, messages[] } or null.
+ */
+const loadSession = async (sessionId) => {
+  if (!sessionId) return null;
+  const { rows } = await pool.query(
+    'SELECT * FROM chat_sessions WHERE id = $1',
+    [sessionId]
+  );
+  return rows[0] || null;
+};
+
+/**
+ * Create a new chat session in PostgreSQL.
+ */
+const createSession = async (learnerId, courseId) => {
+  const { rows } = await pool.query(
+    `INSERT INTO chat_sessions (learner_id, course_id, messages)
+     VALUES ($1, $2, '[]'::jsonb)
+     RETURNING *`,
+    [learnerId, courseId || null]
+  );
+  return rows[0];
+};
+
+/**
+ * Append messages to a session and update updated_at.
+ */
+const appendMessages = async (sessionId, newMessages) => {
+  await pool.query(
+    `UPDATE chat_sessions
+     SET messages   = messages || $1::jsonb,
+         updated_at = NOW()
+     WHERE id = $2`,
+    [JSON.stringify(newMessages), sessionId]
+  );
 };
 
 // ─── COURSE GENERATION ───────────────────────────────────────────────────────
@@ -120,46 +161,53 @@ Return ONLY this JSON:
 
 // ─── AI CHAT TUTOR ───────────────────────────────────────────────────────────
 const chat = async ({ session_id, message, course_id, learner_id, learner_name, level }) => {
-  let session = session_id
-    ? await ChatSession.findById(session_id)
-    : null;
-
+  // Load or create session — stored in PostgreSQL, not MongoDB
+  let session = await loadSession(session_id);
   if (!session) {
-    session = await ChatSession.create({ learner_id, course_id });
+    session = await createSession(learner_id, course_id);
   }
 
-  // RAG: fetch relevant context from Pinecone if available
+  // RAG: fetch relevant context from Pinecone if configured
   let ragContext = '';
   if (process.env.PINECONE_API_KEY && course_id) {
     try {
-      const pc    = getPinecone();
-      const index = pc.index(process.env.PINECONE_INDEX || 'smartedulear-courses');
-      const embed = await geminiEmbed(message);
+      const pc      = getPinecone();
+      const index   = pc.index(process.env.PINECONE_INDEX || 'smartedulear-courses');
+      const embed   = await geminiEmbed(message);
       const results = await index.query({ vector: embed, topK: 3, filter: { course_id }, includeMetadata: true });
       ragContext = results.matches.map((m) => m.metadata?.text || '').join('\n\n');
     } catch {
-      // Pinecone optional — continue without RAG
+      // Pinecone is optional — continue without RAG context
     }
   }
 
-  const systemPrompt = `You are an expert AI tutor for SmartEduLearn. 
+  const systemPrompt = `You are an expert AI tutor for SmartEduLearn.
 Student: ${learner_name} (Level ${level}).
 ${ragContext ? `Relevant course content:\n${ragContext}\n` : ''}
 Be concise, encouraging, and educational. Use examples when helpful.`;
 
+  // Keep last 10 messages for context window efficiency
+  const recentMessages = (session.messages || []).slice(-10);
+
   const messages = [
     { role: 'system', content: systemPrompt },
-    ...session.messages.slice(-10).map((m) => ({ role: m.role, content: m.content })),
+    ...recentMessages.map((m) => ({ role: m.role, content: m.content })),
     { role: 'user', content: message },
   ];
 
   const reply = await geminiChat(messages, { maxTokens: 1024 });
 
-  session.messages.push({ role: 'user', content: message });
-  session.messages.push({ role: 'assistant', content: reply });
-  await session.save();
+  // Persist new messages to PostgreSQL
+  await appendMessages(session.id, [
+    { role: 'user',      content: message, timestamp: new Date().toISOString() },
+    { role: 'assistant', content: reply,   timestamp: new Date().toISOString() },
+  ]);
 
-  return { session_id: session._id, reply, message_count: session.messages.length };
+  return {
+    session_id:    session.id,
+    reply,
+    message_count: (session.messages || []).length + 2,
+  };
 };
 
 // ─── LESSON SUMMARIZER ───────────────────────────────────────────────────────

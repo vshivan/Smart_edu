@@ -22,7 +22,10 @@ const notificationRoutes = require('./routes/notification.routes');
 const adminRoutes = require('./routes/admin.routes');
 const { authenticate } = require('./middleware/auth');
 
-// Initialize passport
+// Initialize DB connection (PostgreSQL only — MongoDB removed)
+require('./config/db');
+
+// Initialize passport (Google OAuth)
 require('./config/passport');
 
 const app = express();
