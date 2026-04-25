@@ -88,13 +88,14 @@ router.get('/google',
 router.get('/google/callback',
   passport.authenticate('google', {
     session: false,
-    failureRedirect: `${process.env.FRONTEND_URL}/login?error=oauth_failed`,
+    failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=oauth_failed`,
   }),
   (req, res, next) => {
     try {
       const tokens = svc.generateTokens(req.user);
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
       res.redirect(
-        `${process.env.FRONTEND_URL}/auth/callback?token=${tokens.accessToken}&refresh=${tokens.refreshToken}`
+        `${frontendUrl}/auth/callback?token=${tokens.accessToken}&refresh=${tokens.refreshToken}`
       );
     } catch (e) { next(e); }
   }

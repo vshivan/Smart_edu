@@ -24,16 +24,16 @@ router.get('/learner/progress', authenticate, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// ── GET /users/check-email — real-time availability (no auth) ─────────────────
+// ── GET /users/check-email — real-time availability (no auth required) ────────
 router.get('/check-email', async (req, res, next) => {
   try {
     const { email } = req.query;
-    if (!email) return res.json({ data: { available: false } });
+    if (!email) return sendSuccess(res, { available: false });
     const { rows } = await pool.query(
       'SELECT id FROM users WHERE LOWER(email) = LOWER($1)',
-      [email]
+      [email.trim()]
     );
-    res.json({ data: { available: rows.length === 0 } });
+    sendSuccess(res, { available: rows.length === 0 });
   } catch (e) { next(e); }
 });
 

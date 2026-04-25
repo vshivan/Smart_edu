@@ -106,8 +106,7 @@ export default function RegisterPage() {
     const timer = setTimeout(async () => {
       try {
         const { data } = await api.get(`/users/check-email?email=${encodeURIComponent(form.email)}`);
-        if (data.data?.available) {
-          setEmailStatus('ok');
+        if (data.data?.available) {          setEmailStatus('ok');
           setEmailMsg('Email is available');
         } else {
           setEmailStatus('error');
