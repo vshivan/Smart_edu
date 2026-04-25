@@ -26,18 +26,19 @@ export default defineConfig({
 
   // ── Dev server (local only — Vercel/Render don't use this) ──────────────────
   server: {
-    port: 3000,
+    port: 5173,
     proxy: {
-      '/api': {
-        target:       'http://localhost:3001',
-        changeOrigin: true,
-        rewrite:      (p) => p.replace(/^\/api/, ''),
-      },
-      '/socket.io': {
-        target:       'http://localhost:3001',
-        ws:           true,
-        changeOrigin: true,
-      },
+      '/auth':          { target: 'http://localhost:3000', changeOrigin: true },
+      '/courses':       { target: 'http://localhost:3000', changeOrigin: true },
+      '/ai':            { target: 'http://localhost:3000', changeOrigin: true },
+      '/quizzes':       { target: 'http://localhost:3000', changeOrigin: true },
+      '/gamification':  { target: 'http://localhost:3000', changeOrigin: true },
+      '/tutors':        { target: 'http://localhost:3000', changeOrigin: true },
+      '/payments':      { target: 'http://localhost:3000', changeOrigin: true },
+      '/notifications': { target: 'http://localhost:3000', changeOrigin: true },
+      '/admin':         { target: 'http://localhost:3000', changeOrigin: true },
+      '/health':        { target: 'http://localhost:3000', changeOrigin: true },
+      '/socket.io':     { target: 'http://localhost:3000', changeOrigin: true, ws: true },
     },
   },
 });
