@@ -24,18 +24,21 @@ router.get('/learner/progress', authenticate, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// ── GET /users/check-email?email=... ─────────────────────────────────────────
-// Real-time email availability check (no auth needed)
+// ── GET /users/check-email — real-time availability (no auth) ─────────────────
 router.get('/check-email', async (req, res, next) => {
   try {
     const { email } = req.query;
-    if (!email) return res.json({ available: false });
-    const { rows } = await pool.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
-    res.json({ available: rows.length === 0 });
+    if (!email) return res.json({ data: { available: false } });
+    const { rows } = await pool.query(
+      'SELECT id FROM users WHERE LOWER(email) = LOWER($1)',
+      [email]
+    );
+    res.json({ data: { available: rows.length === 0 } });
   } catch (e) { next(e); }
 });
 
-// ── GET /users/profile ────────────────────────────────────────────────────────router.get('/profile', authenticate, async (req, res, next) => {
+// ── GET /users/profile ────────────────────────────────────────────────────────
+router.get('/profile', authenticate, async (req, res, next) => {
   try {
     const { rows } = await pool.query(
       `SELECT u.id, u.email, u.first_name, u.last_name, u.avatar_url, u.role,
@@ -66,7 +69,6 @@ router.put('/profile', authenticate, validate(profileSchema), async (req, res, n
   try {
     const { first_name, last_name, bio, learning_goals } = req.body;
 
-    // Update users table
     if (first_name || last_name) {
       const updates = [];
       const params = [];
@@ -80,13 +82,12 @@ router.put('/profile', authenticate, validate(profileSchema), async (req, res, n
       );
     }
 
-    // Update learner_profiles if learner
     if (req.user.role === 'learner' && (bio !== undefined || learning_goals)) {
       const updates = [];
       const params = [];
       let i = 1;
-      if (bio !== undefined)   { updates.push(`bio = $${i++}`);             params.push(bio); }
-      if (learning_goals)      { updates.push(`learning_goals = $${i++}`);  params.push(learning_goals); }
+      if (bio !== undefined) { updates.push(`bio = $${i++}`);            params.push(bio); }
+      if (learning_goals)    { updates.push(`learning_goals = $${i++}`); params.push(learning_goals); }
       if (updates.length) {
         params.push(req.user.id);
         await pool.query(
@@ -96,7 +97,6 @@ router.put('/profile', authenticate, validate(profileSchema), async (req, res, n
       }
     }
 
-    // Return updated profile
     const { rows } = await pool.query(
       `SELECT u.id, u.email, u.first_name, u.last_name, u.avatar_url, u.role,
               lp.xp_total, lp.level, lp.streak_days, lp.bio
