@@ -24,8 +24,18 @@ router.get('/learner/progress', authenticate, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// ── GET /users/profile ────────────────────────────────────────────────────────
-router.get('/profile', authenticate, async (req, res, next) => {
+// ── GET /users/check-email?email=... ─────────────────────────────────────────
+// Real-time email availability check (no auth needed)
+router.get('/check-email', async (req, res, next) => {
+  try {
+    const { email } = req.query;
+    if (!email) return res.json({ available: false });
+    const { rows } = await pool.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
+    res.json({ available: rows.length === 0 });
+  } catch (e) { next(e); }
+});
+
+// ── GET /users/profile ────────────────────────────────────────────────────────router.get('/profile', authenticate, async (req, res, next) => {
   try {
     const { rows } = await pool.query(
       `SELECT u.id, u.email, u.first_name, u.last_name, u.avatar_url, u.role,

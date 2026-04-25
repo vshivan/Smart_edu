@@ -5,6 +5,31 @@ import { Zap, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
 
+// Floating animated background (same as RegisterPage)
+const particles = Array.from({ length: 15 }, (_, i) => ({
+  id: i, x: Math.random() * 100, y: Math.random() * 100,
+  size: Math.random() * 4 + 2, duration: Math.random() * 8 + 6, delay: Math.random() * 4,
+}));
+
+function AnimatedBackground() {
+  return (
+    <div className="fixed inset-0 overflow-hidden pointer-events-none">
+      <motion.div className="absolute -top-40 -right-40 w-96 h-96 bg-brand-200/30 dark:bg-brand-900/20 rounded-full blur-3xl"
+        animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }} />
+      <motion.div className="absolute -bottom-40 -left-40 w-96 h-96 bg-violet-200/30 dark:bg-violet-900/20 rounded-full blur-3xl"
+        animate={{ scale: [1.2, 1, 1.2], opacity: [0.3, 0.5, 0.3] }}
+        transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 2 }} />
+      {particles.map(p => (
+        <motion.div key={p.id} className="absolute rounded-full bg-brand-400/20 dark:bg-brand-500/10"
+          style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size }}
+          animate={{ y: [-20, 20, -20], opacity: [0.2, 0.6, 0.2] }}
+          transition={{ duration: p.duration, repeat: Infinity, ease: 'easeInOut', delay: p.delay }} />
+      ))}
+    </div>
+  );
+}
+
 export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPw, setShowPw] = useState(false);
@@ -35,12 +60,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-brand-50 to-white dark:from-dark-card dark:to-dark-bg flex items-center justify-center px-4 py-12 transition-colors">
+    <div className="min-h-screen relative flex items-center justify-center px-4 overflow-hidden bg-gradient-to-br from-slate-50 via-white to-brand-50 dark:from-dark-bg dark:via-dark-card dark:to-dark-bg transition-colors">
+      <AnimatedBackground />
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35 }}
-        className="w-full max-w-md"
+        initial={{ opacity: 0, y: 20, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        className="w-full max-w-md relative z-10"
       >
         {/* Header */}
         <div className="text-center mb-8">
