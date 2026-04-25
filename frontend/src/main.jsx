@@ -1,20 +1,23 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import App from './App';
 import SmartBot from './components/SmartBot/SmartBot';
+import { useThemeStore } from './store/themeStore';
 import './index.css';
 
 const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { retry: 1, staleTime: 5 * 60 * 1000 },
-  },
+  defaultOptions: { queries: { retry: 1, staleTime: 5 * 60 * 1000 } },
 });
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
+function Root() {
+  const { initTheme } = useThemeStore();
+  // Apply saved theme on first render
+  useEffect(() => { initTheme(); }, []);
+
+  return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <App />
@@ -36,5 +39,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         />
       </BrowserRouter>
     </QueryClientProvider>
-  </React.StrictMode>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode><Root /></React.StrictMode>
 );

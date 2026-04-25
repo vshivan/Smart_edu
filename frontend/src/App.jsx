@@ -16,6 +16,7 @@ const RegisterPage       = lazy(() => import('./pages/auth/RegisterPage'));
 const AuthCallback       = lazy(() => import('./pages/auth/AuthCallback'));
 const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
 const ResetPasswordPage  = lazy(() => import('./pages/auth/ResetPasswordPage'));
+const PaymentCallback    = lazy(() => import('./pages/PaymentCallback'));
 
 // ── Shared public pages ───────────────────────────────────────────────────────
 const CourseCatalog    = lazy(() => import('./pages/learner/CourseCatalog'));
@@ -84,6 +85,7 @@ export default function App() {
             <Route path="/auth/callback"    element={<AnimatedPage><AuthCallback /></AnimatedPage>} />
             <Route path="/forgot-password" element={<AnimatedPage><ForgotPasswordPage /></AnimatedPage>} />
             <Route path="/reset-password"  element={<AnimatedPage><ResetPasswordPage /></AnimatedPage>} />
+            <Route path="/payment/callback" element={<AnimatedPage><PaymentCallback /></AnimatedPage>} />
             <Route path="/courses"         element={<AnimatedPage><CourseCatalog /></AnimatedPage>} />
             <Route path="/courses/:id"   element={<AnimatedPage><CourseDetail /></AnimatedPage>} />
             <Route path="/tutors"        element={<AnimatedPage><TutorMarketplace /></AnimatedPage>} />

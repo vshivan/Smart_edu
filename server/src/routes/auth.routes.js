@@ -103,4 +103,28 @@ router.get('/google/callback',
 // Current user
 router.get('/me', authenticate, (req, res) => sendSuccess(res, req.user));
 
+// Change password (authenticated — different from reset-password which uses a token)
+router.post('/change-password', authenticate, async (req, res, next) => {
+  try {
+    const { current_password, new_password } = req.body;
+    if (!current_password || !new_password) throw new (require('../utils/errors').AppError)('Both passwords required', 400);
+    if (new_password.length < 8) throw new (require('../utils/errors').AppError)('New password must be at least 8 characters', 400);
+
+    const bcrypt = require('bcryptjs');
+    const { pool } = require('../config/db');
+
+    const { rows } = await pool.query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
+    if (!rows.length) throw new (require('../utils/errors').AppError)('User not found', 404);
+    if (!rows[0].password_hash) throw new (require('../utils/errors').AppError)('Account uses Google sign-in — no password to change', 400);
+
+    const valid = await bcrypt.compare(current_password, rows[0].password_hash);
+    if (!valid) throw new (require('../utils/errors').AppError)('Current password is incorrect', 401);
+
+    const hash = await bcrypt.hash(new_password, 12);
+    await pool.query('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [hash, req.user.id]);
+
+    sendSuccess(res, null, 'Password changed successfully');
+  } catch (e) { next(e); }
+});
+
 module.exports = router;

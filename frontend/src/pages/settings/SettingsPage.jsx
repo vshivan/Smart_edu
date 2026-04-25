@@ -255,7 +255,7 @@ function NotificationsTab() {
 
 // ── Appearance Tab ────────────────────────────────────────────────────────────
 function AppearanceTab() {
-  const [accent, setAccent] = useState('indigo');
+  const { theme, setTheme } = require('../../store/themeStore').useThemeStore();
 
   const colors = [
     { id: 'indigo', label: 'Indigo',  bg: 'bg-indigo-500' },
@@ -268,66 +268,51 @@ function AppearanceTab() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-base font-semibold text-text-primary">Appearance</h2>
+        <h2 className="text-base font-semibold text-text-primary dark:text-white">Appearance</h2>
         <p className="text-sm text-text-muted mt-0.5">Customize how SmartEduLearn looks</p>
       </div>
 
-      <div className="card">
-        <p className="text-sm font-semibold text-text-primary mb-3">Theme</p>
+      {/* Theme */}
+      <div className="card dark:bg-dark-card dark:border-dark-border">
+        <p className="text-sm font-semibold text-text-primary dark:text-white mb-3">Theme</p>
         <div className="grid grid-cols-2 gap-3">
           {[
-            { id: 'light', label: 'Light', preview: 'bg-white border-slate-200' },
-            { id: 'system', label: 'System', preview: 'bg-gradient-to-r from-white to-slate-800' },
+            { id: 'light', label: 'Light', icon: '☀️', desc: 'Clean white interface' },
+            { id: 'dark',  label: 'Dark',  icon: '🌙', desc: 'Easy on the eyes' },
           ].map(t => (
             <button
               key={t.id}
+              onClick={() => setTheme(t.id)}
               className={`p-4 rounded-xl border-2 text-left transition-all ${
-                t.id === 'light' ? 'border-brand-400 bg-brand-50' : 'border-surface-border hover:border-slate-300'
+                theme === t.id
+                  ? 'border-brand-400 bg-brand-50 dark:bg-brand-900/20'
+                  : 'border-surface-border dark:border-dark-border hover:border-slate-300 dark:hover:border-slate-600'
               }`}
             >
-              <div className={`w-full h-12 rounded-lg mb-2 border ${t.preview}`} />
-              <p className="text-sm font-medium text-text-primary">{t.label}</p>
-              {t.id === 'light' && <p className="text-xs text-brand-600 font-medium">Active</p>}
+              <div className="text-2xl mb-2">{t.icon}</div>
+              <p className="text-sm font-semibold text-text-primary dark:text-white">{t.label}</p>
+              <p className="text-xs text-text-muted">{t.desc}</p>
+              {theme === t.id && <p className="text-xs text-brand-600 dark:text-brand-400 font-semibold mt-1">✓ Active</p>}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="card">
-        <p className="text-sm font-semibold text-text-primary mb-3">Accent Color</p>
+      {/* Accent colors */}
+      <div className="card dark:bg-dark-card dark:border-dark-border">
+        <p className="text-sm font-semibold text-text-primary dark:text-white mb-3">Accent Color</p>
         <div className="flex gap-3">
           {colors.map(c => (
             <button
               key={c.id}
-              onClick={() => setAccent(c.id)}
-              className={`flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all ${
-                accent === c.id ? 'ring-2 ring-offset-2 ring-brand-400' : ''
-              }`}
+              className="flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all"
             >
               <div className={`w-8 h-8 rounded-full ${c.bg}`} />
               <span className="text-xs text-text-muted">{c.label}</span>
             </button>
           ))}
         </div>
-      </div>
-
-      <div className="card">
-        <p className="text-sm font-semibold text-text-primary mb-1">Sidebar Density</p>
-        <p className="text-xs text-text-muted mb-3">Control how compact the navigation appears</p>
-        <div className="flex gap-3">
-          {['Comfortable', 'Compact'].map(d => (
-            <button
-              key={d}
-              className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
-                d === 'Comfortable'
-                  ? 'bg-brand-50 border-brand-300 text-brand-700'
-                  : 'bg-white border-surface-border text-text-secondary hover:border-slate-300'
-              }`}
-            >
-              {d}
-            </button>
-          ))}
-        </div>
+        <p className="text-xs text-text-muted mt-3">More accent colors coming in v1.2</p>
       </div>
     </div>
   );

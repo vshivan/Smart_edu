@@ -20,6 +20,7 @@ const tutorRoutes = require('./routes/tutor.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const adminRoutes = require('./routes/admin.routes');
+const userRoutes = require('./routes/user.routes');
 const { authenticate } = require('./middleware/auth');
 
 // Initialize DB connection (PostgreSQL only — MongoDB removed)
@@ -78,13 +79,14 @@ app.get('/health', (_, res) => res.json({
 // ─── ROUTES ──────────────────────────────────────────────────────────────────
 app.use('/auth',           authRoutes);
 app.use('/courses',        courseRoutes);
-app.use('/ai',             authenticate, aiRoutes);   // all AI routes require auth
+app.use('/ai',             authenticate, aiRoutes);
 app.use('/quizzes',        quizRoutes);
 app.use('/gamification',   gamificationRoutes);
 app.use('/tutors',         tutorRoutes);
 app.use('/payments',       paymentRoutes);
 app.use('/notifications',  notificationRoutes);
 app.use('/admin',          adminRoutes);
+app.use('/users',          userRoutes);
 
 // ─── SOCKET.IO ───────────────────────────────────────────────────────────────
 const io = new Server(httpServer, {

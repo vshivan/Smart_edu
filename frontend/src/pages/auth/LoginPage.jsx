@@ -28,11 +28,14 @@ export default function LoginPage() {
   };
 
   const googleLogin = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL || '/api'}/auth/google`;
+    // In dev: Vite proxies /auth/google → localhost:3000
+    // In prod: VITE_API_URL is the full Render URL
+    const base = import.meta.env.VITE_API_URL || '';
+    window.location.href = `${base}/auth/google`;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-brand-50 to-white flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-gradient-to-b from-brand-50 to-white dark:from-dark-card dark:to-dark-bg flex items-center justify-center px-4 py-12 transition-colors">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}

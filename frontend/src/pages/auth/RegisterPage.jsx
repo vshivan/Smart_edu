@@ -29,7 +29,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-brand-50 to-white flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-gradient-to-b from-brand-50 to-white dark:from-dark-card dark:to-dark-bg flex items-center justify-center px-4 py-12 transition-colors">
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="w-12 h-12 bg-gradient-to-br from-brand-500 to-brand-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-md shadow-brand-200">
@@ -67,17 +67,17 @@ export default function RegisterPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="input-label">First Name</label>
-                <input type="text" required value={form.first_name} onChange={set('first_name')} className="input" placeholder="John" />
+                <input type="text" required value={form.first_name} onChange={set('first_name')} className="input" placeholder="Your first name" />
               </div>
               <div>
                 <label className="input-label">Last Name</label>
-                <input type="text" required value={form.last_name} onChange={set('last_name')} className="input" placeholder="Doe" />
+                <input type="text" required value={form.last_name} onChange={set('last_name')} className="input" placeholder="Your last name" />
               </div>
             </div>
 
             <div>
               <label className="input-label">Email</label>
-              <input type="email" required value={form.email} onChange={set('email')} className="input" placeholder="you@example.com" />
+              <input type="email" required value={form.email} onChange={set('email')} className="input" placeholder="your@email.com" />
             </div>
 
             <div>
