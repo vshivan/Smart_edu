@@ -471,3 +471,18 @@ CREATE TABLE IF NOT EXISTS chat_sessions (
 
 CREATE INDEX IF NOT EXISTS idx_chat_sessions_learner ON chat_sessions(learner_id);
 CREATE INDEX IF NOT EXISTS idx_chat_sessions_course  ON chat_sessions(course_id);
+
+-- ============================================================
+-- PASSWORD RESET TOKENS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash VARCHAR(64) NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at    TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_prt_token_hash ON password_reset_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_prt_user       ON password_reset_tokens(user_id);

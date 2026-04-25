@@ -102,7 +102,7 @@ export default function LoginPage() {
             </div>
 
             <div className="flex justify-end">
-              <Link to="/forgot-password" className="text-sm text-brand-600 hover:text-brand-700 font-medium">Forgot password?</Link>
+              <Link to="/forgot-password" className="text-sm text-brand-400 hover:text-brand-300">Forgot password?</Link>
             </div>
 
             <button type="submit" disabled={loading} className="btn-primary w-full py-2.5 text-sm">
