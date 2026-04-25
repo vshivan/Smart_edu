@@ -73,7 +73,7 @@ export default function LandingPage() {
               <Link to="/register" className="btn-primary text-base px-8 py-3.5 flex items-center gap-2 justify-center shadow-md shadow-brand-200">
                 Start Learning Free <ArrowRight size={18} />
               </Link>
-              <Link to="/courses" className="btn-secondary text-base px-8 py-3.5 flex items-center gap-2 justify-center">
+              <Link to="/login" className="btn-secondary text-base px-8 py-3.5 flex items-center gap-2 justify-center">
                 <BookOpen size={18} /> Browse Courses
               </Link>
             </motion.div>

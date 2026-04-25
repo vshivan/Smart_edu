@@ -5,7 +5,9 @@ import GlobalSearch from './GlobalSearch';
 import NotificationsPanel from './NotificationsPanel';
 import { Link } from 'react-router-dom';
 
-export default function TopBar() {
+// embedded=true → renders as flex row inside DashboardLayout's header
+// embedded=false (default) → renders its own <header> element
+export default function TopBar({ embedded = false }) {
   const { user } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
 
@@ -13,8 +15,8 @@ export default function TopBar() {
     ? `${user.first_name[0]}${user.last_name[0]}`.toUpperCase()
     : user?.email?.[0]?.toUpperCase() || '?';
 
-  return (
-    <header className="h-14 bg-white dark:bg-dark-card border-b border-surface-border dark:border-dark-border flex items-center px-5 gap-3 shadow-sm shrink-0 transition-colors">
+  const content = (
+    <>
       {/* Global Search */}
       <GlobalSearch />
 
@@ -22,7 +24,7 @@ export default function TopBar() {
 
       {/* Streak pill */}
       {user?.role === 'learner' && (
-        <div className="flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 px-3 py-1.5 rounded-full">
+        <div className="hidden sm:flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 px-3 py-1.5 rounded-full">
           <Flame size={13} className="text-amber-500" />
           <span className="text-amber-600 dark:text-amber-400 text-xs font-bold">{user.streak || 0} day streak</span>
         </div>
@@ -51,6 +53,16 @@ export default function TopBar() {
       >
         {initials}
       </Link>
+    </>
+  );
+
+  if (embedded) {
+    return <>{content}</>;
+  }
+
+  return (
+    <header className="h-14 bg-white dark:bg-dark-card border-b border-surface-border dark:border-dark-border flex items-center px-5 gap-3 shadow-sm shrink-0 transition-colors">
+      {content}
     </header>
   );
 }

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Flame, Trophy, BookOpen, Zap, ArrowRight, Clock, TrendingUp } from 'lucide-react';
@@ -12,7 +13,7 @@ const StatCard = ({ icon: Icon, label, value, color, bg }) => (
       <Icon size={20} className={color} />
     </div>
     <div>
-      <p className="text-2xl font-bold text-text-primary">{value}</p>
+      <p className="text-2xl font-bold text-text-primary dark:text-white">{value}</p>
       <p className="text-text-muted text-xs font-medium">{label}</p>
     </div>
   </div>
@@ -20,6 +21,11 @@ const StatCard = ({ icon: Icon, label, value, color, bg }) => (
 
 export default function Dashboard() {
   const { user } = useAuthStore();
+
+  // Auto-check streak on dashboard load (once per day via Redis TTL)
+  useEffect(() => {
+    api.post('/gamification/streak').catch(() => {});
+  }, []);
 
   const { data: profile } = useQuery({
     queryKey: ['gamification-profile'],
@@ -50,10 +56,10 @@ export default function Dashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={Zap}      label="Total XP"    value={(profile?.xp_total || 0).toLocaleString()} color="text-brand-600"   bg="bg-brand-50" />
-        <StatCard icon={Trophy}   label="Level"       value={profile?.level || 1}                        color="text-amber-600"   bg="bg-amber-50" />
-        <StatCard icon={Flame}    label="Day Streak"  value={profile?.streak_days || 0}                  color="text-orange-500"  bg="bg-orange-50" />
-        <StatCard icon={BookOpen} label="Enrolled"    value={enrollments?.length || 0}                   color="text-emerald-600" bg="bg-emerald-50" />
+        <StatCard icon={Zap}      label="Total XP"   value={(profile?.xp_total || 0).toLocaleString()} color="text-brand-600"   bg="bg-brand-50 dark:bg-brand-900/30" />
+        <StatCard icon={Trophy}   label="Level"      value={profile?.level || 1}                        color="text-amber-600"   bg="bg-amber-50 dark:bg-amber-900/30" />
+        <StatCard icon={Flame}    label="Day Streak" value={profile?.streak_days || 0}                  color="text-orange-500"  bg="bg-orange-50 dark:bg-orange-900/30" />
+        <StatCard icon={BookOpen} label="Enrolled"   value={enrollments?.length || 0}                   color="text-emerald-600" bg="bg-emerald-50 dark:bg-emerald-900/30" />
       </div>
 
       {/* XP Progress */}
@@ -61,7 +67,7 @@ export default function Dashboard() {
         <div className="card">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="font-semibold text-text-primary text-sm">
+              <p className="font-semibold text-text-primary dark:text-white text-sm">
                 Level {profile.level} — <span className="text-brand-600">{profile.level_info?.title}</span>
               </p>
               <p className="text-text-muted text-xs mt-0.5">{profile.xp_to_next_level} XP to next level</p>
@@ -94,17 +100,17 @@ export default function Dashboard() {
               >
                 <Link to={`/learn/${e.course_id}`}>
                   <div className="flex items-start justify-between mb-3">
-                    <div className="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center border border-brand-100">
+                    <div className="w-10 h-10 bg-brand-50 dark:bg-brand-900/30 rounded-xl flex items-center justify-center border border-brand-100 dark:border-brand-800/50">
                       <BookOpen size={18} className="text-brand-600" />
                     </div>
                     <span className="text-xs font-semibold text-text-muted">{Math.round(e.progress_pct)}%</span>
                   </div>
-                  <h3 className="font-semibold text-text-primary text-sm mb-2 line-clamp-2">{e.title}</h3>
+                  <h3 className="font-semibold text-text-primary dark:text-white text-sm mb-2 line-clamp-2">{e.title}</h3>
                   <div className="xp-bar mt-3">
                     <div className="xp-fill" style={{ width: `${e.progress_pct}%` }} />
                   </div>
                   <div className="flex items-center gap-1 mt-2 text-xs text-text-muted">
-                    <Clock size={11} /> Last active {e.last_active || 'recently'}
+                    <Clock size={11} /> {e.last_active || 'Recently enrolled'}
                   </div>
                 </Link>
               </motion.div>
@@ -112,10 +118,10 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="card text-center py-14 border-dashed">
-            <div className="w-14 h-14 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <div className="w-14 h-14 bg-brand-50 dark:bg-brand-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <BookOpen size={24} className="text-brand-500" />
             </div>
-            <p className="font-semibold text-text-primary mb-1">No courses yet</p>
+            <p className="font-semibold text-text-primary dark:text-white mb-1">No courses yet</p>
             <p className="text-text-muted text-sm mb-5">Generate your first AI-powered course to get started</p>
             <Link to="/generate" className="btn-primary inline-flex items-center gap-2 text-sm">
               <Zap size={15} /> Generate Course

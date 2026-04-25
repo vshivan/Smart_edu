@@ -36,8 +36,8 @@ CREATE TABLE users (
   first_name      VARCHAR(100) NOT NULL,
   last_name       VARCHAR(100) NOT NULL,
   avatar_url      TEXT,
-  is_active       BOOLEAN DEFAULT true,
-  is_verified     BOOLEAN DEFAULT false,
+  is_active       BOOLEAN DEFAULT true,   -- users active immediately; email verify optional
+  is_verified     BOOLEAN DEFAULT false,  -- email verification status (separate from active)
   is_banned       BOOLEAN DEFAULT false,
   ban_reason      TEXT,
   banned_at       TIMESTAMPTZ,
