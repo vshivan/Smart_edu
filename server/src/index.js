@@ -139,13 +139,105 @@ app.set('io', io);
 app.use(notFound);
 app.use(errorHandler);
 
+// ─── INLINE MIGRATIONS (runs on every startup, safe/idempotent) ──────────────
+// These run directly via the DB pool so no file system access needed.
+// This is needed because in Docker mode, only server/ is in the container.
+async function runInlineMigrations() {
+  try {
+    const { pool } = require('./config/db');
+
+    // Ensure schema_migrations table exists
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        filename   VARCHAR(255) PRIMARY KEY,
+        applied_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
+    const migrations = [
+      {
+        filename: '001_rename_payment_columns.sql',
+        sql: `
+          ALTER TABLE payments RENAME COLUMN stripe_payment_id TO cashfree_payment_id;
+          ALTER TABLE payments RENAME COLUMN stripe_session_id  TO cashfree_order_id;
+        `,
+      },
+      {
+        filename: '002_add_chat_sessions.sql',
+        sql: `
+          CREATE TABLE IF NOT EXISTS chat_sessions (
+            id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            learner_id      UUID NOT NULL,
+            course_id       UUID,
+            messages        JSONB NOT NULL DEFAULT '[]',
+            context_summary TEXT DEFAULT '',
+            created_at      TIMESTAMPTZ DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ DEFAULT NOW()
+          );
+          CREATE INDEX IF NOT EXISTS idx_chat_sessions_learner ON chat_sessions(learner_id);
+          CREATE INDEX IF NOT EXISTS idx_chat_sessions_course  ON chat_sessions(course_id);
+        `,
+      },
+      {
+        filename: '003_add_password_reset_tokens.sql',
+        sql: `
+          CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            token_hash VARCHAR(64) NOT NULL UNIQUE,
+            expires_at TIMESTAMPTZ NOT NULL,
+            used_at    TIMESTAMPTZ,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+          );
+          CREATE INDEX IF NOT EXISTS idx_prt_token_hash ON password_reset_tokens(token_hash);
+          CREATE INDEX IF NOT EXISTS idx_prt_user       ON password_reset_tokens(user_id);
+        `,
+      },
+      {
+        filename: '004_fix_is_active_default.sql',
+        sql: `
+          ALTER TABLE users ALTER COLUMN is_active SET DEFAULT true;
+          UPDATE users SET is_active = true WHERE is_active = false AND is_banned = false;
+        `,
+      },
+    ];
+
+    const { rows: applied } = await pool.query('SELECT filename FROM schema_migrations');
+    const appliedSet = new Set(applied.map(r => r.filename));
+
+    for (const m of migrations) {
+      if (appliedSet.has(m.filename)) continue;
+      try {
+        await pool.query('BEGIN');
+        await pool.query(m.sql);
+        await pool.query('INSERT INTO schema_migrations (filename) VALUES ($1)', [m.filename]);
+        await pool.query('COMMIT');
+        logger.info(`✅ Migration applied: ${m.filename}`);
+      } catch (err) {
+        await pool.query('ROLLBACK');
+        // Some migrations may fail if already applied (e.g. rename on renamed column) — skip
+        logger.warn(`⚠ Migration skipped (already applied?): ${m.filename} — ${err.message}`);
+        // Mark as applied so we don't retry
+        await pool.query(
+          'INSERT INTO schema_migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING',
+          [m.filename]
+        );
+      }
+    }
+  } catch (err) {
+    logger.error('Inline migration error:', err.message);
+  }
+}
+
 // ─── START SERVER ────────────────────────────────────────────────────────────
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, async () => {
   logger.info(`🚀 SmartEduLearn Server running on port ${PORT}`);
   logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
 
+  // Run inline migrations after server starts
+  await runInlineMigrations();
+
   // ── Self-ping to prevent Render free tier from sleeping ──────────────────
-  // Only runs in production. Pings /health every 14 minutes.
   if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
     const https = require('https');
     const pingUrl = `${process.env.RENDER_EXTERNAL_URL}/health`;
@@ -155,7 +247,7 @@ httpServer.listen(PORT, () => {
       }).on('error', (err) => {
         logger.warn(`Self-ping failed: ${err.message}`);
       });
-    }, 14 * 60 * 1000); // every 14 minutes
+    }, 14 * 60 * 1000);
     logger.info(`Self-ping active → ${pingUrl}`);
   }
 });
