@@ -1,41 +1,60 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import { useAuthStore } from './store/authStore';
+import PageTransition from './components/PageTransition';
 
-// Layouts
-import PublicLayout from './layouts/PublicLayout';
+// ── Layouts (not lazy — tiny, always needed) ──────────────────────────────────
+import PublicLayout    from './layouts/PublicLayout';
 import DashboardLayout from './layouts/DashboardLayout';
-import AdminLayout from './layouts/AdminLayout';
+import AdminLayout     from './layouts/AdminLayout';
 
-// Public pages
-import LandingPage from './pages/LandingPage';
-import LoginPage from './pages/auth/LoginPage';
-import RegisterPage from './pages/auth/RegisterPage';
-import AuthCallback from './pages/auth/AuthCallback';
+// ── Public pages ──────────────────────────────────────────────────────────────
+const LandingPage   = lazy(() => import('./pages/LandingPage'));
+const LoginPage     = lazy(() => import('./pages/auth/LoginPage'));
+const RegisterPage  = lazy(() => import('./pages/auth/RegisterPage'));
+const AuthCallback  = lazy(() => import('./pages/auth/AuthCallback'));
 
-// Learner pages
-import Dashboard from './pages/learner/Dashboard';
-import CourseCatalog from './pages/learner/CourseCatalog';
-import CourseDetail from './pages/learner/CourseDetail';
-import CourseLearn from './pages/learner/CourseLearn';
-import GenerateCourse from './pages/learner/GenerateCourse';
-import Roadmap from './pages/learner/Roadmap';
-import AIChat from './pages/learner/AIChat';
-import QuizPage from './pages/learner/QuizPage';
-import Achievements from './pages/learner/Achievements';
-import Leaderboard from './pages/learner/Leaderboard';
+// ── Shared public pages ───────────────────────────────────────────────────────
+const CourseCatalog    = lazy(() => import('./pages/learner/CourseCatalog'));
+const CourseDetail     = lazy(() => import('./pages/learner/CourseDetail'));
+const TutorMarketplace = lazy(() => import('./pages/learner/TutorMarketplace'));
+const TutorProfile     = lazy(() => import('./pages/learner/TutorProfile'));
 
-// Tutor pages
-import TutorDashboard from './pages/tutor/TutorDashboard';
-import TutorMarketplace from './pages/learner/TutorMarketplace';
-import TutorProfile from './pages/learner/TutorProfile';
+// ── Learner pages ─────────────────────────────────────────────────────────────
+const Dashboard     = lazy(() => import('./pages/learner/Dashboard'));
+const CourseLearn   = lazy(() => import('./pages/learner/CourseLearn'));
+const GenerateCourse = lazy(() => import('./pages/learner/GenerateCourse'));
+const Roadmap       = lazy(() => import('./pages/learner/Roadmap'));
+const AIChat        = lazy(() => import('./pages/learner/AIChat'));
+const QuizPage      = lazy(() => import('./pages/learner/QuizPage'));
+const Achievements  = lazy(() => import('./pages/learner/Achievements'));
+const Leaderboard   = lazy(() => import('./pages/learner/Leaderboard'));
 
-// Admin pages
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminUsers from './pages/admin/AdminUsers';
-import AdminTutors from './pages/admin/AdminTutors';
-import AdminCourses from './pages/admin/AdminCourses';
-import AdminAnalytics from './pages/admin/AdminAnalytics';
+// ── Tutor pages ───────────────────────────────────────────────────────────────
+const TutorDashboard = lazy(() => import('./pages/tutor/TutorDashboard'));
 
+// ── Admin pages ───────────────────────────────────────────────────────────────
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminUsers     = lazy(() => import('./pages/admin/AdminUsers'));
+const AdminTutors    = lazy(() => import('./pages/admin/AdminTutors'));
+const AdminCourses   = lazy(() => import('./pages/admin/AdminCourses'));
+const AdminAnalytics = lazy(() => import('./pages/admin/AdminAnalytics'));
+
+// ── Shared pages ──────────────────────────────────────────────────────────────
+const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
+const NotFound     = lazy(() => import('./pages/NotFound'));
+
+// ── Spinner shown while lazy chunks load ─────────────────────────────────────
+function PageSpinner() {
+  return (
+    <div className="flex h-screen items-center justify-center bg-surface">
+      <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
+
+// ── Route guard ───────────────────────────────────────────────────────────────
 const ProtectedRoute = ({ children, roles }) => {
   const { user, token } = useAuthStore();
   if (!token) return <Navigate to="/login" replace />;
@@ -43,48 +62,65 @@ const ProtectedRoute = ({ children, roles }) => {
   return children;
 };
 
+// ── Animated page wrapper used inside each route ──────────────────────────────
+function AnimatedPage({ children }) {
+  return <PageTransition>{children}</PageTransition>;
+}
+
 export default function App() {
+  const location = useLocation();
+
   return (
-    <Routes>
-      {/* Public */}
-      <Route element={<PublicLayout />}>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/courses" element={<CourseCatalog />} />
-        <Route path="/courses/:id" element={<CourseDetail />} />
-        <Route path="/tutors" element={<TutorMarketplace />} />
-        <Route path="/tutors/:id" element={<TutorProfile />} />
-      </Route>
+    <Suspense fallback={<PageSpinner />}>
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          {/* ── Public ───────────────────────────────────────────────── */}
+          <Route element={<PublicLayout />}>
+            <Route path="/"              element={<AnimatedPage><LandingPage /></AnimatedPage>} />
+            <Route path="/login"         element={<AnimatedPage><LoginPage /></AnimatedPage>} />
+            <Route path="/register"      element={<AnimatedPage><RegisterPage /></AnimatedPage>} />
+            <Route path="/auth/callback" element={<AnimatedPage><AuthCallback /></AnimatedPage>} />
+            <Route path="/courses"       element={<AnimatedPage><CourseCatalog /></AnimatedPage>} />
+            <Route path="/courses/:id"   element={<AnimatedPage><CourseDetail /></AnimatedPage>} />
+            <Route path="/tutors"        element={<AnimatedPage><TutorMarketplace /></AnimatedPage>} />
+            <Route path="/tutors/:id"    element={<AnimatedPage><TutorProfile /></AnimatedPage>} />
+          </Route>
 
-      {/* Learner */}
-      <Route element={<ProtectedRoute roles={['learner']}><DashboardLayout /></ProtectedRoute>}>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/generate" element={<GenerateCourse />} />
-        <Route path="/roadmap" element={<Roadmap />} />
-        <Route path="/chat" element={<AIChat />} />
-        <Route path="/learn/:courseId" element={<CourseLearn />} />
-        <Route path="/quiz/:quizId" element={<QuizPage />} />
-        <Route path="/achievements" element={<Achievements />} />
-        <Route path="/leaderboard" element={<Leaderboard />} />
-      </Route>
+          {/* ── Learner ──────────────────────────────────────────────── */}
+          <Route element={<ProtectedRoute roles={['learner']}><DashboardLayout /></ProtectedRoute>}>
+            <Route path="/dashboard"       element={<AnimatedPage><Dashboard /></AnimatedPage>} />
+            <Route path="/generate"        element={<AnimatedPage><GenerateCourse /></AnimatedPage>} />
+            <Route path="/roadmap"         element={<AnimatedPage><Roadmap /></AnimatedPage>} />
+            <Route path="/chat"            element={<AnimatedPage><AIChat /></AnimatedPage>} />
+            <Route path="/learn/:courseId" element={<AnimatedPage><CourseLearn /></AnimatedPage>} />
+            <Route path="/quiz/:quizId"    element={<AnimatedPage><QuizPage /></AnimatedPage>} />
+            <Route path="/achievements"    element={<AnimatedPage><Achievements /></AnimatedPage>} />
+            <Route path="/leaderboard"     element={<AnimatedPage><Leaderboard /></AnimatedPage>} />
+          </Route>
 
-      {/* Tutor */}
-      <Route element={<ProtectedRoute roles={['tutor']}><DashboardLayout /></ProtectedRoute>}>
-        <Route path="/tutor/dashboard" element={<TutorDashboard />} />
-      </Route>
+          {/* ── Tutor ────────────────────────────────────────────────── */}
+          <Route element={<ProtectedRoute roles={['tutor']}><DashboardLayout /></ProtectedRoute>}>
+            <Route path="/tutor/dashboard" element={<AnimatedPage><TutorDashboard /></AnimatedPage>} />
+          </Route>
 
-      {/* Admin */}
-      <Route element={<ProtectedRoute roles={['admin']}><AdminLayout /></ProtectedRoute>}>
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/users" element={<AdminUsers />} />
-        <Route path="/admin/tutors" element={<AdminTutors />} />
-        <Route path="/admin/courses" element={<AdminCourses />} />
-        <Route path="/admin/analytics" element={<AdminAnalytics />} />
-      </Route>
+          {/* ── Admin ────────────────────────────────────────────────── */}
+          <Route element={<ProtectedRoute roles={['admin']}><AdminLayout /></ProtectedRoute>}>
+            <Route path="/admin"           element={<AnimatedPage><AdminDashboard /></AnimatedPage>} />
+            <Route path="/admin/users"     element={<AnimatedPage><AdminUsers /></AnimatedPage>} />
+            <Route path="/admin/tutors"    element={<AnimatedPage><AdminTutors /></AnimatedPage>} />
+            <Route path="/admin/courses"   element={<AnimatedPage><AdminCourses /></AnimatedPage>} />
+            <Route path="/admin/analytics" element={<AnimatedPage><AdminAnalytics /></AnimatedPage>} />
+          </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+          {/* ── Settings — shared across all authenticated roles ──────── */}
+          <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+            <Route path="/settings" element={<AnimatedPage><SettingsPage /></AnimatedPage>} />
+          </Route>
+
+          {/* ── 404 ──────────────────────────────────────────────────── */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </AnimatePresence>
+    </Suspense>
   );
 }

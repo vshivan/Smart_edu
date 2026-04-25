@@ -6,9 +6,9 @@ export default function XPBar({ current, max, showLabel = true }) {
   return (
     <div>
       {showLabel && (
-        <div className="flex justify-between text-xs text-gray-500 mb-1">
-          <span>{current} XP</span>
-          <span>{max} XP</span>
+        <div className="flex justify-between text-xs text-text-muted mb-1.5">
+          <span className="font-medium">{current.toLocaleString()} XP</span>
+          <span>{max.toLocaleString()} XP</span>
         </div>
       )}
       <div className="xp-bar">

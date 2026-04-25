@@ -1,0 +1,92 @@
+services:
+  # ─── DATABASES ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: sel_postgres
+    environment:
+      POSTGRES_DB:       smartedulear
+      POSTGRES_USER:     ${POSTGRES_USER:-sel_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sel_pass}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sel_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:7-jammy
+    container_name: sel_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: sel_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ─── BACKEND (unified) ──────────────────────────────────────────────────────
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: sel_server
+    ports:
+      - "3001:3001"
+    env_file: .env
+    environment:
+      NODE_ENV:     development
+      PORT:         3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sel_user}:${POSTGRES_PASSWORD:-sel_pass}@postgres:5432/smartedulear
+      MONGODB_URL:  mongodb://mongodb:27017
+      REDIS_URL:    redis://redis:6379
+    depends_on:
+      postgres: { condition: service_healthy }
+      mongodb:  { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─── FRONTEND ───────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sel_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      server: { condition: service_healthy }
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  mongo_data:
+  redis_data:
