@@ -141,6 +141,21 @@ app.use(errorHandler);
 httpServer.listen(PORT, () => {
   logger.info(`🚀 SmartEduLearn Server running on port ${PORT}`);
   logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+
+  // ── Self-ping to prevent Render free tier from sleeping ──────────────────
+  // Only runs in production. Pings /health every 14 minutes.
+  if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
+    const https = require('https');
+    const pingUrl = `${process.env.RENDER_EXTERNAL_URL}/health`;
+    setInterval(() => {
+      https.get(pingUrl, (res) => {
+        logger.info(`Self-ping: ${res.statusCode}`);
+      }).on('error', (err) => {
+        logger.warn(`Self-ping failed: ${err.message}`);
+      });
+    }, 14 * 60 * 1000); // every 14 minutes
+    logger.info(`Self-ping active → ${pingUrl}`);
+  }
 });
 
 module.exports = { app, io };

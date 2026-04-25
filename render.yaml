@@ -92,6 +92,11 @@ services:
         sync: false
         # Value: https://smartedulear-server.onrender.com/auth/google/callback
 
+      # ── Self-ping (Render sets this automatically) ────────────────────────
+      - key: RENDER_EXTERNAL_URL
+        sync: false
+        # Value: https://smartedulear-server.onrender.com
+
   # ─── Managed Redis ────────────────────────────────────────────────────────
   - type: redis
     name: smartedulear-redis
