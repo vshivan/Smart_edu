@@ -1,226 +1,205 @@
-# SmartEduLearn — Deployment Guide
+# 🚀 SmartEduLearn — Deployment Guide (No Docker Required)
 
-## Overview
-
-| What | Where |
-|------|-------|
-| Frontend | Nginx (port 80/443) → serves React SPA |
-| Backend  | Node.js (port 3001, internal only) |
-| Databases | Postgres + MongoDB + Redis (internal only) |
-| SSL | Let's Encrypt via Certbot (auto-renews) |
-| CI/CD | GitHub Actions → SSH deploy on push to `main` |
+Deploy the full stack for **free** using managed cloud services.
 
 ---
 
-## Option A — Automated (GitHub Actions + VPS)
+## Services You Need (all free)
 
-### Step 1 — Get a VPS
-
-Recommended providers (cheapest to most):
-- **Hetzner** — CX22 (2 vCPU, 4GB RAM) ~€4/month ← best value
-- **DigitalOcean** — Basic Droplet (2 vCPU, 2GB RAM) ~$12/month
-- **AWS Lightsail** — $5/month (1GB RAM — add swap)
-- **Vultr** — $6/month
-
-Minimum specs: **2 vCPU, 2GB RAM, 20GB SSD**, Ubuntu 22.04 or 24.04
+| Service | What for | Sign up |
+|---------|----------|---------|
+| [Neon](https://neon.tech) | PostgreSQL database | neon.tech |
+| [Upstash](https://upstash.com) | Redis (sessions, rate limiting) | upstash.com |
+| [Render](https://render.com) | Node.js backend hosting | render.com |
+| [Vercel](https://vercel.com) | React frontend hosting | vercel.com |
+| [Cloudinary](https://cloudinary.com) *(optional)* | File/image uploads | cloudinary.com |
 
 ---
 
-### Step 2 — Point your domain to the VPS
+## Step 1 — PostgreSQL on Neon (5 minutes)
 
-In your domain registrar (GoDaddy / Namecheap / Cloudflare):
-
-```
-A record:   YOUR_DOMAIN.com     → YOUR_SERVER_IP
-A record:   www.YOUR_DOMAIN.com → YOUR_SERVER_IP
-```
-
-Wait 5–30 minutes for DNS to propagate.
+1. Go to [neon.tech](https://neon.tech) → **Sign up free**
+2. Create a new project → name it `smartedulear`
+3. Copy the **Connection string** — looks like:
+   ```
+   postgresql://user:password@ep-xxx.us-east-1.aws.neon.tech/smartedulear?sslmode=require
+   ```
+4. Run the schema to create all tables:
+   ```bash
+   # Install psql if you don't have it, or use Neon's built-in SQL editor
+   psql "your-neon-connection-string" -f database/schema.sql
+   ```
+   Or paste the contents of `database/schema.sql` into the **Neon SQL Editor** and run it.
 
 ---
 
-### Step 3 — Provision the server
+## Step 2 — Redis on Upstash (2 minutes)
 
-SSH into your fresh VPS and run:
+1. Go to [upstash.com](https://upstash.com) → **Sign up free**
+2. Create a new Redis database → region: closest to your Render region
+3. Copy the **Redis URL** — looks like:
+   ```
+   rediss://default:password@xxx.upstash.io:6379
+   ```
+
+---
+
+## Step 3 — Backend on Render (10 minutes)
+
+1. Go to [render.com](https://render.com) → **Sign up with GitHub**
+2. Click **New → Web Service**
+3. Connect your GitHub repo: `vshivan/Smart_edu`
+4. Configure:
+   - **Name:** `smartedulear-server`
+   - **Root Directory:** `server`
+   - **Runtime:** Node
+   - **Build Command:** `npm install`
+   - **Start Command:** `npm start`
+   - **Instance Type:** Free
+
+5. Add **Environment Variables** (click "Add Environment Variable" for each):
+
+   | Key | Value |
+   |-----|-------|
+   | `NODE_ENV` | `production` |
+   | `DATABASE_URL` | your Neon connection string |
+   | `REDIS_URL` | your Upstash Redis URL |
+   | `JWT_SECRET` | run `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"` and paste result |
+   | `FRONTEND_URL` | `https://your-app.vercel.app` (fill after Step 4) |
+   | `ALLOWED_ORIGINS` | `https://your-app.vercel.app` |
+   | `GEMINI_API_KEY` | your Gemini API key |
+   | `GEMINI_MODEL` | `gemini-1.5-flash` |
+   | `GOOGLE_CLIENT_ID` | your Google OAuth client ID |
+   | `GOOGLE_CLIENT_SECRET` | your Google OAuth client secret |
+   | `GOOGLE_CALLBACK_URL` | `https://smartedulear-server.onrender.com/auth/google/callback` |
+   | `GMAIL_USER` | your Gmail address *(optional)* |
+   | `GMAIL_APP_PASSWORD` | your Gmail app password *(optional)* |
+
+6. Click **Create Web Service** → wait ~3 minutes for first deploy
+
+7. Your backend URL will be: `https://smartedulear-server.onrender.com`
+
+8. **Run the DB migration** — open Render Shell or use Neon SQL editor:
+   ```bash
+   # In Render Shell (Dashboard → your service → Shell tab)
+   node scripts/migrate.js
+   ```
+
+---
+
+## Step 4 — Frontend on Vercel (5 minutes)
+
+1. Go to [vercel.com](https://vercel.com) → **Sign up with GitHub**
+2. Click **Add New → Project**
+3. Import your repo: `vshivan/Smart_edu`
+4. Configure:
+   - **Framework Preset:** Vite
+   - **Root Directory:** `frontend`
+   - **Build Command:** `npm run build`
+   - **Output Directory:** `dist`
+
+5. Add **Environment Variable**:
+   | Key | Value |
+   |-----|-------|
+   | `VITE_API_URL` | `https://smartedulear-server.onrender.com` |
+
+6. Click **Deploy** → wait ~2 minutes
+
+7. Your frontend URL will be: `https://smartedulear.vercel.app` (or similar)
+
+8. **Go back to Render** and update `FRONTEND_URL` and `ALLOWED_ORIGINS` with your actual Vercel URL.
+
+---
+
+## Step 5 — Google OAuth (update callback URL)
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com)
+2. APIs & Services → Credentials → your OAuth client
+3. Add to **Authorized redirect URIs**:
+   ```
+   https://smartedulear-server.onrender.com/auth/google/callback
+   ```
+4. Add to **Authorized JavaScript origins**:
+   ```
+   https://smartedulear.vercel.app
+   ```
+
+---
+
+## Step 6 — Verify everything works
 
 ```bash
-ssh root@YOUR_SERVER_IP
-curl -fsSL https://raw.githubusercontent.com/YOUR_GITHUB/smartedulear/main/scripts/provision-server.sh | bash
+# Health check
+curl https://smartedulear-server.onrender.com/health
+
+# Should return:
+# {"status":"ok","service":"smartedulear-unified","timestamp":"..."}
 ```
 
-Or copy the script manually:
+Then open your Vercel URL and test:
+- ✅ Register a new account
+- ✅ Login
+- ✅ Forgot password (check console logs on Render if Gmail not configured)
+- ✅ Google OAuth
+
+---
+
+## Local Development (no Docker)
+
+For local dev you need PostgreSQL and Redis running locally.
+
+### Option A — Use cloud services locally too (easiest)
+Just use your Neon + Upstash URLs in `server/.env`. No local DB needed.
+
+### Option B — Install locally on Windows
+
+**PostgreSQL:**
+1. Download from [postgresql.org/download/windows](https://www.postgresql.org/download/windows/)
+2. Install with default settings, set a password
+3. Run: `psql -U postgres -c "CREATE DATABASE smartedulear;"`
+4. Run schema: `psql -U postgres -d smartedulear -f database/schema.sql`
+5. `DATABASE_URL=postgresql://postgres:yourpassword@localhost:5432/smartedulear`
+
+**Redis (Windows):**
+1. Install [Memurai](https://www.memurai.com/) — Redis-compatible for Windows, free
+2. It starts automatically as a Windows service
+3. `REDIS_URL=redis://localhost:6379`
+
+### Start the server
 ```bash
-scp scripts/provision-server.sh root@YOUR_SERVER_IP:/tmp/
-ssh root@YOUR_SERVER_IP "bash /tmp/provision-server.sh"
+cd server
+npm install
+npm run dev
+# → http://localhost:3000
 ```
 
-This installs Docker, configures the firewall, gets SSL certs, and sets up the app directory.
-
----
-
-### Step 4 — Configure GitHub Secrets
-
-Go to your GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**
-
-Add these secrets:
-
-| Secret Name | Value |
-|-------------|-------|
-| `DOCKERHUB_USERNAME` | Your Docker Hub username |
-| `DOCKERHUB_TOKEN` | Docker Hub access token (Hub → Account Settings → Security) |
-| `SSH_HOST` | Your VPS IP address |
-| `SSH_USER` | `smartedu` (created by provision script) |
-| `SSH_PRIVATE_KEY` | Your SSH private key (`cat ~/.ssh/id_rsa`) |
-| `PRODUCTION_DOMAIN` | `yourdomain.com` |
-| `PRODUCTION_ENV` | Full contents of your `.env.production` file |
-
----
-
-### Step 5 — Update config files with your domain
-
-**`nginx/nginx.prod.conf`** — replace `YOUR_DOMAIN.com`:
-```nginx
-server_name yourdomain.com www.yourdomain.com;
-ssl_certificate /etc/nginx/ssl/live/yourdomain.com/fullchain.pem;
-ssl_certificate_key /etc/nginx/ssl/live/yourdomain.com/privkey.pem;
-```
-
-**`.env.production`** — fill in all values:
-```env
-FRONTEND_URL=https://yourdomain.com
-ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
-POSTGRES_PASSWORD=use_a_strong_random_password
-REDIS_PASSWORD=use_a_strong_random_password
-JWT_SECRET=<128-char hex — run: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))">
-RAZORPAY_KEY_ID=rzp_live_...
-RAZORPAY_KEY_SECRET=...
-RESEND_API_KEY=re_...
-GEMINI_API_KEY=...
-```
-
----
-
-### Step 6 — Deploy
-
-Push to `main` branch — GitHub Actions will:
-1. Run all 100 tests
-2. Build Docker images and push to Docker Hub
-3. SSH into your VPS and do a rolling restart
-
+### Start the frontend
 ```bash
-git add .
-git commit -m "deploy: initial production deployment"
-git push origin main
-```
-
-Watch it at: **GitHub → Actions tab**
-
----
-
-## Option B — Manual Deploy (no CI/CD)
-
-If you don't want GitHub Actions, deploy manually:
-
-```bash
-# 1. Edit the config at the top of the script
-nano scripts/deploy.sh
-
-# 2. Run it
-bash scripts/deploy.sh
+cd frontend
+npm install
+npm run dev
+# → http://localhost:5173
 ```
 
 ---
 
-## Option C — Deploy on a Single Machine (simplest)
+## Free Tier Limits
 
-If you just want it running on one server without CI/CD:
+| Service | Limit | Notes |
+|---------|-------|-------|
+| Render | 1 free web service, spins down after 15min inactivity | First request after sleep takes ~30s |
+| Neon | 0.5 GB storage, 1 project | More than enough for MVP |
+| Upstash | 10,000 Redis commands/day | ~100 active users/day |
+| Vercel | Unlimited deployments | No limits for static sites |
 
-```bash
-# On your server
-git clone https://github.com/YOUR_GITHUB/smartedulear.git
-cd smartedulear
-
-# Copy and fill in production env
-cp .env.production.example .env.production
-nano .env.production
-
-# Start everything
-docker compose -f docker-compose.prod.yml up -d
-
-# Check logs
-docker compose -f docker-compose.prod.yml logs -f
-```
+**To avoid Render cold starts:** Upgrade to Render Starter ($7/mo) or use a free uptime monitor like [UptimeRobot](https://uptimerobot.com) to ping `/health` every 14 minutes.
 
 ---
 
-## Post-Deployment Checklist
+## Redeploy after code changes
 
-- [ ] `https://yourdomain.com` loads the app
-- [ ] `https://yourdomain.com/api/health` returns `{"status":"ok"}`
-- [ ] Login works
-- [ ] AI course generation works (Gemini key valid)
-- [ ] Razorpay test payment works
-- [ ] Email notification received (Resend key valid)
-- [ ] SSL certificate is valid (green padlock)
-- [ ] Admin panel accessible at `/admin`
+**Backend (Render):** Auto-deploys on every push to `main` ✅
 
----
+**Frontend (Vercel):** Auto-deploys on every push to `main` ✅
 
-## Useful Commands (on the server)
-
-```bash
-# View all container status
-docker compose -f /opt/smartedulear/docker-compose.prod.yml ps
-
-# Follow logs
-docker compose -f /opt/smartedulear/docker-compose.prod.yml logs -f
-
-# Follow only server logs
-docker compose -f /opt/smartedulear/docker-compose.prod.yml logs -f server
-
-# Restart a single service
-docker compose -f /opt/smartedulear/docker-compose.prod.yml restart server
-
-# Stop everything
-docker compose -f /opt/smartedulear/docker-compose.prod.yml down
-
-# Database backup
-docker exec sel_postgres pg_dump -U sel_user smartedulear > backup_$(date +%Y%m%d).sql
-
-# Check disk usage
-docker system df
-```
-
----
-
-## Monitoring (optional but recommended)
-
-For production monitoring, add **Uptime Kuma** (free, self-hosted):
-
-```yaml
-# Add to docker-compose.prod.yml
-  uptime-kuma:
-    image: louislam/uptime-kuma:1
-    container_name: sel_uptime
-    ports:
-      - "3002:3001"
-    volumes:
-      - uptime_data:/app/data
-    restart: always
-```
-
-Then visit `http://YOUR_SERVER_IP:3002` and add monitors for:
-- `https://yourdomain.com` (frontend)
-- `https://yourdomain.com/api/health` (backend)
-
----
-
-## Scaling (when you need it)
-
-The current setup runs everything on one server. When you need to scale:
-
-1. **Database** → Move Postgres to [Supabase](https://supabase.com) (free tier), MongoDB to [Atlas](https://mongodb.com/atlas) (free tier)
-2. **Redis** → Move to [Upstash](https://upstash.com) (free tier, serverless)
-3. **Backend** → Deploy to [Railway](https://railway.app) or [Render](https://render.com)
-4. **Frontend** → Deploy to [Vercel](https://vercel.com) or [Netlify](https://netlify.com) (free)
-5. **Files** → AWS S3 (already configured in `.env`)
+Both are connected to your GitHub repo — just `git push` and they redeploy automatically.

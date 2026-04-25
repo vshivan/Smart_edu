@@ -1,7 +1,12 @@
 # ════════════════════════════════════════════════════════════════════════════
 # SmartEduLearn — Render Blueprint
 # Deploys backend as a Web Service + managed Postgres + managed Redis
-# MongoDB → use MongoDB Atlas free tier (add MONGODB_URL manually)
+# No Docker, no MongoDB — PostgreSQL only.
+#
+# Usage:
+#   1. Push this file to GitHub
+#   2. Render Dashboard → New → Blueprint → connect your repo
+#   3. Fill in the "sync: false" env vars in the Render dashboard
 # ════════════════════════════════════════════════════════════════════════════
 
 services:
@@ -9,11 +14,11 @@ services:
   - type: web
     name: smartedulear-server
     runtime: node
-    region: singapore          # closest to India for Razorpay latency
+    region: singapore          # closest to India
     plan: free                 # upgrade to Starter ($7/mo) for always-on
     rootDir: server
-    buildCommand: npm install --legacy-peer-deps
-    startCommand: node scripts/migrate.js && node src/index.js
+    buildCommand: npm install
+    startCommand: npm run start:migrate   # runs DB migration then starts server
     healthCheckPath: /health
 
     envVars:
@@ -21,7 +26,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 10000            # Render assigns this automatically
+        value: 10000
 
       # ── Auth ─────────────────────────────────────────────────────────────
       - key: JWT_SECRET
@@ -44,11 +49,6 @@ services:
           type: redis
           property: connectionString
 
-      # ── MongoDB Atlas — set manually in Render dashboard ──────────────────
-      - key: MONGODB_URL
-        sync: false
-        # Value: mongodb+srv://sel_user:PASSWORD@cluster.mongodb.net/smartedulear_ai
-
       # ── Frontend URL — set after Vercel deploy ────────────────────────────
       - key: FRONTEND_URL
         sync: false
@@ -59,11 +59,11 @@ services:
 
       # ── Gemini AI ─────────────────────────────────────────────────────────
       - key: GEMINI_API_KEY
-        sync: false
+        sync: false             # Set in Render dashboard
       - key: GEMINI_MODEL
         value: gemini-1.5-flash
 
-      # ── Pinecone (optional) ───────────────────────────────────────────────
+      # ── Pinecone (optional — AI chat RAG) ────────────────────────────────
       - key: PINECONE_API_KEY
         sync: false
       - key: PINECONE_INDEX
@@ -83,7 +83,7 @@ services:
       - key: GMAIL_APP_PASSWORD
         sync: false
 
-      # ── Google OAuth (optional) ───────────────────────────────────────────
+      # ── Google OAuth ──────────────────────────────────────────────────────
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
@@ -96,7 +96,7 @@ services:
   - type: redis
     name: smartedulear-redis
     region: singapore
-    plan: free                  # 25MB RAM, no persistence on free tier
+    plan: free                  # 25MB RAM
     ipAllowList: []             # only accessible from Render internal network
 
 # ─── Managed PostgreSQL ───────────────────────────────────────────────────────
