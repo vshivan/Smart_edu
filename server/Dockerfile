@@ -5,4 +5,5 @@ RUN npm ci --only=production
 COPY . .
 EXPOSE 10000
 ENV PORT=10000
-CMD ["npm", "run", "start:migrate"]
+# Use 'start' not 'start:migrate' — migrations run safely inside src/index.js startup
+CMD ["node", "src/index.js"]
