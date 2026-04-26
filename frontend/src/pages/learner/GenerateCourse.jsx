@@ -215,38 +215,29 @@ export default function GenerateCourse() {
     setLoading(true);
     setResult(null);
     try {
-      const { data } = await api.post('/ai/generate-course', {
+      // generate-and-save: creates course + modules + lessons + quizzes + enrolls in one call
+      const { data } = await api.post('/ai/generate-and-save', {
         subject:         form.subject,
         topics:          form.custom_topics,
         difficulty:      form.difficulty,
         estimated_hours: form.estimated_hours,
-        audience:        'general learners',
       });
       setResult(data.data);
-      toast.success('Course generated!');
+      toast.success(data.data.message || 'Course generated and saved!');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Generation failed. Check your Gemini API key.');
+      const msg = err.response?.data?.message || 'Generation failed';
+      if (msg.includes('GEMINI_API_KEY') || msg.includes('not configured')) {
+        toast.error('AI not configured — add GEMINI_API_KEY to Render environment variables.');
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const saveCourse = async () => {
-    try {
-      const { data } = await api.post('/courses', {
-        title:           result.title,
-        description:     result.description,
-        subject:         form.subject,
-        difficulty:      form.difficulty,
-        estimated_hours: form.estimated_hours,
-        is_free:         true,
-        tags:            result.tags || [],
-      });
-      toast.success('Course saved!');
-      navigate(`/learn/${data.data.id}`);
-    } catch {
-      toast.error('Failed to save course');
-    }
+  const goToCourse = () => {
+    if (result?.course?.id) navigate(`/learn/${result.course.id}`);
   };
 
   return (
@@ -363,21 +354,27 @@ export default function GenerateCourse() {
               {/* Result header */}
               <div className="flex items-start justify-between mb-4 gap-4">
                 <div>
-                  <h2 className="text-lg font-bold text-text-primary">{result.title}</h2>
-                  <p className="text-text-secondary text-sm mt-1 leading-relaxed">{result.description}</p>
+                  <h2 className="text-lg font-bold text-text-primary">{result.course?.title || result.title}</h2>
+                  <p className="text-text-secondary text-sm mt-1 leading-relaxed">{result.course?.description || result.description}</p>
                 </div>
-                <button onClick={saveCourse} className="btn-primary flex items-center gap-2 shrink-0 text-sm">
-                  <BookOpen size={14} /> Save Course
+                <button onClick={goToCourse} className="btn-primary flex items-center gap-2 shrink-0 text-sm">
+                  <BookOpen size={14} /> Start Learning
                 </button>
               </div>
 
-              {/* Meta badges */}
+              {/* Stats */}
               <div className="flex flex-wrap gap-2 mb-5">
-                <span className="badge-brand"><Target size={11} /> {result.modules?.length} modules</span>
+                <span className="badge-brand"><Target size={11} /> {result.modules_count || result.modules?.length} modules</span>
                 <span className="badge-green"><Clock size={11} /> {form.estimated_hours}h</span>
                 <span className="badge-gray capitalize">{form.difficulty}</span>
-                {form.custom_topics.length > 0 && (
-                  <span className="badge-purple">{form.custom_topics.length} topics selected</span>
+                {result.quizzes_count > 0 && (
+                  <span className="badge-purple">🎯 {result.quizzes_count} quizzes auto-generated</span>
+                )}
+                {result.xp_earned > 0 && (
+                  <span className="badge-yellow">+{result.xp_earned} XP earned</span>
+                )}
+                {result.enrolled && (
+                  <span className="badge-green">✅ Auto-enrolled</span>
                 )}
               </div>
 
