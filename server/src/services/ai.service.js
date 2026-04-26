@@ -4,10 +4,19 @@ const { pool } = require('../config/db');
 const { AppError } = require('../utils/errors');
 
 // ─── GEMINI CLIENT ───────────────────────────────────────────────────────────
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+let genAI;
+const getGenAI = () => {
+  if (!genAI) {
+    if (!process.env.GEMINI_API_KEY) {
+      throw new AppError('GEMINI_API_KEY is not configured. Please add it to your Render environment variables.', 503);
+    }
+    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  }
+  return genAI;
+};
 
 const getModel = () =>
-  genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-1.5-flash' });
+  getGenAI().getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-1.5-flash' });
 
 const geminiChat = async (messages, { jsonMode = false, maxTokens = 2048 } = {}) => {
   const model = getModel();
@@ -121,9 +130,18 @@ Return ONLY this JSON (no markdown fences, no explanation):
 
   const raw = await geminiChat([{ role: 'user', content: prompt }], { jsonMode: true, maxTokens: 4096 });
   try {
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!parsed.title || !parsed.modules) {
+      throw new Error('Invalid structure');
+    }
+    return parsed;
   } catch {
-    throw new AppError('AI returned invalid JSON for course generation', 500);
+    // Try to extract JSON from response if it has extra text
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (match) {
+      try { return JSON.parse(match[0]); } catch {}
+    }
+    throw new AppError('AI returned invalid response. Please try again.', 500);
   }
 };
 

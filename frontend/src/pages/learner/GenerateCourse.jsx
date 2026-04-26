@@ -194,11 +194,10 @@ function TopicSelector({ subject, selected, onChange }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function GenerateCourse() {
   const [form, setForm] = useState({
-    subject:          '',
-    custom_topics:    [],
-    difficulty:       'beginner',
-    estimated_hours:  10,
-    target_audience:  '',
+    subject:         '',
+    custom_topics:   [],
+    difficulty:      'beginner',
+    estimated_hours: 10,
   });
   const [loading, setLoading] = useState(false);
   const [result,  setResult]  = useState(null);
@@ -217,11 +216,11 @@ export default function GenerateCourse() {
     setResult(null);
     try {
       const { data } = await api.post('/ai/generate-course', {
-        subject:          form.subject,
-        topics:           form.custom_topics,
-        difficulty:       form.difficulty,
-        estimated_hours:  form.estimated_hours,
-        audience:         form.target_audience,
+        subject:         form.subject,
+        topics:          form.custom_topics,
+        difficulty:      form.difficulty,
+        estimated_hours: form.estimated_hours,
+        audience:        'general learners',
       });
       setResult(data.data);
       toast.success('Course generated!');
@@ -304,7 +303,7 @@ export default function GenerateCourse() {
               <span className="w-5 h-5 bg-brand-600 text-white rounded-full text-xs flex items-center justify-center font-bold">3</span>
               <label className="input-label mb-0">Course Settings</label>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Difficulty */}
               <div>
                 <label className="input-label">Difficulty</label>
@@ -333,18 +332,6 @@ export default function GenerateCourse() {
                   value={form.estimated_hours}
                   onChange={e => setForm(f => ({ ...f, estimated_hours: parseInt(e.target.value) || 1 }))}
                   className="input"
-                />
-              </div>
-
-              {/* Audience */}
-              <div>
-                <label className="input-label">Target Audience</label>
-                <input
-                  type="text"
-                  value={form.target_audience}
-                  onChange={e => setForm(f => ({ ...f, target_audience: e.target.value }))}
-                  className="input"
-                  placeholder="e.g. Beginners, Professionals"
                 />
               </div>
             </div>
