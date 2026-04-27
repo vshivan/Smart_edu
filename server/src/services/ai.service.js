@@ -17,7 +17,7 @@ const getGenAI = () => {
 };
 
 const getModel = () =>
-  getGenAI().getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-1.5-flash' });
+  getGenAI().getGenerativeModel({ model: (process.env.GEMINI_MODEL || 'gemini-1.5-flash-latest').trim() });
 
 const geminiChat = async (messages, { jsonMode = false, maxTokens = 2048 } = {}) => {
   const model = getModel();

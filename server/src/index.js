@@ -108,7 +108,7 @@ app.get('/debug/gemini', async (_, res) => {
 
     const { GoogleGenerativeAI } = require('@google/generative-ai');
     const genAI = new GoogleGenerativeAI(key);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
     const result = await model.generateContent('Say "Gemini is working" in JSON: {"status":"ok","message":"..."}');
     const text = result.response.text();
     res.json({ ok: true, response: text.slice(0, 200) });
