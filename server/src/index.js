@@ -100,6 +100,23 @@ app.get('/debug/config', (_, res) => res.json({
   database:     !!process.env.DATABASE_URL,
 }));
 
+// Debug — test Gemini directly (no auth required)
+app.get('/debug/gemini', async (_, res) => {
+  try {
+    const key = (process.env.GEMINI_API_KEY || '').trim();
+    if (!key) return res.json({ ok: false, error: 'GEMINI_API_KEY not set' });
+
+    const { GoogleGenerativeAI } = require('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(key);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const result = await model.generateContent('Say "Gemini is working" in JSON: {"status":"ok","message":"..."}');
+    const text = result.response.text();
+    res.json({ ok: true, response: text.slice(0, 200) });
+  } catch (err) {
+    res.json({ ok: false, error: err.message });
+  }
+});
+
 // ─── Application routes ───────────────────────────────────────────────────────
 app.use('/auth',           authRoutes);
 app.use('/courses',        courseRoutes);
