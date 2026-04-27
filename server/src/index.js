@@ -106,12 +106,26 @@ app.get('/debug/gemini', async (_, res) => {
     const key = (process.env.GEMINI_API_KEY || '').trim();
     if (!key) return res.json({ ok: false, error: 'GEMINI_API_KEY not set' });
 
-    const { GoogleGenerativeAI } = require('@google/generative-ai');
-    const genAI = new GoogleGenerativeAI(key);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    const result = await model.generateContent('Say "Gemini is working" in JSON: {"status":"ok","message":"..."}');
-    const text = result.response.text();
-    res.json({ ok: true, response: text.slice(0, 200) });
+    const axios = require('axios');
+    const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro'];
+    const results = {};
+
+    for (const model of models) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${key}`;
+        const { data } = await axios.post(url, {
+          contents: [{ parts: [{ text: 'Say hello in one word' }] }],
+          generationConfig: { maxOutputTokens: 20 },
+        }, { timeout: 15000 });
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        results[model] = { ok: true, response: text.trim() };
+        break; // stop at first working model
+      } catch (err) {
+        results[model] = { ok: false, error: err.response?.data?.error?.message || err.message };
+      }
+    }
+
+    res.json({ key_set: true, models_tested: results });
   } catch (err) {
     res.json({ ok: false, error: err.message });
   }
