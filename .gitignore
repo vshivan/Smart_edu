@@ -1,4 +1,6 @@
-# ─── Dependencies ────────────────────────────────────────────────────────────
+# ─── Private presentation docs (never commit) ────────────────────────────────
+PRESENTATION.md
+CHALLENGES.md
 node_modules/
 .pnp
 .pnp.js
