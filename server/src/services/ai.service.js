@@ -3,11 +3,12 @@ const { pool } = require('../config/db');
 const { AppError } = require('../utils/errors');
 
 // ─── Gemini via direct HTTP (avoids SDK version/model issues) ────────────────
-const GEMINI_MODELS = [
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
-  'gemini-1.5-pro',
-  'gemini-pro',
+const GEMINI_ENDPOINTS = [
+  { model: 'gemini-2.0-flash',   api: 'v1beta' },
+  { model: 'gemini-1.5-flash',   api: 'v1beta' },
+  { model: 'gemini-1.5-pro',     api: 'v1beta' },
+  { model: 'gemini-2.0-flash',   api: 'v1' },
+  { model: 'gemini-pro',         api: 'v1beta' },
 ];
 
 const geminiRequest = async (prompt, { jsonMode = false, maxTokens = 4096 } = {}) => {
@@ -23,11 +24,10 @@ const geminiRequest = async (prompt, { jsonMode = false, maxTokens = 4096 } = {}
     },
   };
 
-  // Try each model until one works
   let lastError;
-  for (const model of GEMINI_MODELS) {
+  for (const { model, api } of GEMINI_ENDPOINTS) {
     try {
-      const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${key}`;
+      const url = `https://generativelanguage.googleapis.com/${api}/models/${model}:generateContent?key=${key}`;
       const { data } = await axios.post(url, body, {
         headers: { 'Content-Type': 'application/json' },
         timeout: 60000,
@@ -37,12 +37,18 @@ const geminiRequest = async (prompt, { jsonMode = false, maxTokens = 4096 } = {}
     } catch (err) {
       lastError = err;
       const status = err.response?.status;
-      // 404 = model not found, try next. Other errors = stop.
-      if (status !== 404) break;
+      const errMsg = err.response?.data?.error?.message || '';
+      // 404 = model not found, try next
+      // 429 = quota exceeded on this model, try next
+      if (status !== 404 && status !== 429) break;
     }
   }
 
   const errMsg = lastError?.response?.data?.error?.message || lastError?.message || 'Gemini API error';
+  // Check if it's a quota issue
+  if (errMsg.includes('quota') || errMsg.includes('Quota')) {
+    throw new AppError('AI quota exceeded. Please get a new Gemini API key from aistudio.google.com', 429);
+  }
   throw new AppError(`AI generation failed: ${errMsg}`, 502);
 };
 

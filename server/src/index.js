@@ -107,25 +107,32 @@ app.get('/debug/gemini', async (_, res) => {
     if (!key) return res.json({ ok: false, error: 'GEMINI_API_KEY not set' });
 
     const axios = require('axios');
-    const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro'];
+    const endpoints = [
+      { model: 'gemini-2.0-flash', api: 'v1beta' },
+      { model: 'gemini-1.5-flash', api: 'v1beta' },
+      { model: 'gemini-2.0-flash', api: 'v1' },
+      { model: 'gemini-pro',       api: 'v1beta' },
+    ];
     const results = {};
 
-    for (const model of models) {
+    for (const { model, api } of endpoints) {
+      const label = `${model} (${api})`;
       try {
-        const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${key}`;
+        const url = `https://generativelanguage.googleapis.com/${api}/models/${model}:generateContent?key=${key}`;
         const { data } = await axios.post(url, {
           contents: [{ parts: [{ text: 'Say hello in one word' }] }],
           generationConfig: { maxOutputTokens: 20 },
         }, { timeout: 15000 });
         const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        results[model] = { ok: true, response: text.trim() };
-        break; // stop at first working model
+        results[label] = { ok: true, response: text.trim() };
+        break;
       } catch (err) {
-        results[model] = { ok: false, error: err.response?.data?.error?.message || err.message };
+        const msg = err.response?.data?.error?.message || err.message;
+        results[label] = { ok: false, error: msg.slice(0, 120) };
       }
     }
 
-    res.json({ key_set: true, models_tested: results });
+    res.json({ key_set: true, results });
   } catch (err) {
     res.json({ ok: false, error: err.message });
   }
