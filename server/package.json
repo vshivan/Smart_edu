@@ -15,10 +15,12 @@
   "jest": {
     "testEnvironment": "node",
     "testTimeout": 30000,
-    "testMatch": ["**/tests/**/*.test.js"]
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ]
   },
   "dependencies": {
-    "@google/generative-ai": "^0.15.0",
+    "@google/generative-ai": "^0.21.0",
     "@pinecone-database/pinecone": "^2.2.2",
     "axios": "^1.7.2",
     "bcryptjs": "^2.4.3",
