@@ -196,6 +196,10 @@ async function runMigrations() {
           UPDATE users SET is_active = true WHERE is_active = false AND is_banned = false;
         `,
       },
+      {
+        name: '005_add_notes_to_lesson_progress',
+        sql: `ALTER TABLE lesson_progress ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT '';`,
+      },
     ];
 
     const { rows } = await pool.query('SELECT filename FROM schema_migrations');

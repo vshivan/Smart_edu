@@ -74,7 +74,6 @@ const submitQuiz = async (quizId, learnerId, { answers, time_taken_s }) => {
     attempts_remaining: max_attempts - used - 1,
   };
 };
-
 const getAttemptResult = async (attemptId, learnerId) => {
   const { rows } = await pool.query(
     `SELECT qa.*, q.title, q.pass_score,
