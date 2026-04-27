@@ -43,8 +43,7 @@ app.use(cors({
   origin: (origin, cb) => {
     const allowed = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173')
       .split(',')
-      .map(o => o.trim());
-    // Allow requests with no origin (curl, Render health checks, etc.)
+      .map(o => o.trim().replace(/\n/g, ''));
     if (!origin || allowed.includes(origin)) return cb(null, true);
     cb(new Error(`CORS: ${origin} not allowed`));
   },

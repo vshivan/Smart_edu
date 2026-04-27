@@ -7,10 +7,11 @@ const { AppError } = require('../utils/errors');
 let genAI;
 const getGenAI = () => {
   if (!genAI) {
-    if (!process.env.GEMINI_API_KEY) {
+    const key = (process.env.GEMINI_API_KEY || '').trim();
+    if (!key) {
       throw new AppError('GEMINI_API_KEY is not configured. Please add it to your Render environment variables.', 503);
     }
-    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    genAI = new GoogleGenerativeAI(key);
   }
   return genAI;
 };
