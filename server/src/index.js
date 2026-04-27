@@ -90,6 +90,17 @@ app.get('/api', (_, res) => res.json({
   endpoints: ['/auth', '/courses', '/ai', '/quizzes', '/gamification', '/tutors', '/payments', '/notifications', '/admin', '/users'],
 }));
 
+// Debug — shows which optional env vars are configured (no secret values)
+app.get('/debug/config', (_, res) => res.json({
+  gemini:       !!process.env.GEMINI_API_KEY,
+  google_oauth: !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET,
+  callback_url: process.env.GOOGLE_CALLBACK_URL || 'NOT SET',
+  frontend_url: process.env.FRONTEND_URL || 'NOT SET',
+  allowed_origins: process.env.ALLOWED_ORIGINS || 'NOT SET',
+  redis:        !!process.env.REDIS_URL,
+  database:     !!process.env.DATABASE_URL,
+}));
+
 // ─── Application routes ───────────────────────────────────────────────────────
 app.use('/auth',           authRoutes);
 app.use('/courses',        courseRoutes);
