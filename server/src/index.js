@@ -100,39 +100,48 @@ app.get('/debug/config', (_, res) => res.json({
   database:     !!process.env.DATABASE_URL,
 }));
 
-// Debug — test Gemini directly (no auth required)
+// Debug — test AI providers (no auth required)
 app.get('/debug/gemini', async (_, res) => {
   try {
-    const key = (process.env.GEMINI_API_KEY || '').trim();
-    if (!key) return res.json({ ok: false, error: 'GEMINI_API_KEY not set' });
-
     const axios = require('axios');
-    const endpoints = [
-      { model: 'gemini-2.0-flash', api: 'v1beta' },
-      { model: 'gemini-1.5-flash', api: 'v1beta' },
-      { model: 'gemini-2.0-flash', api: 'v1' },
-      { model: 'gemini-pro',       api: 'v1beta' },
-    ];
     const results = {};
 
-    for (const { model, api } of endpoints) {
-      const label = `${model} (${api})`;
+    // Test Groq
+    const groqKey = (process.env.GROQ_API_KEY || '').trim();
+    if (groqKey) {
       try {
-        const url = `https://generativelanguage.googleapis.com/${api}/models/${model}:generateContent?key=${key}`;
-        const { data } = await axios.post(url, {
-          contents: [{ parts: [{ text: 'Say hello in one word' }] }],
-          generationConfig: { maxOutputTokens: 20 },
-        }, { timeout: 15000 });
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        results[label] = { ok: true, response: text.trim() };
-        break;
+        const { data } = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+          model: 'llama-3.1-8b-instant',
+          messages: [{ role: 'user', content: 'Say hello in one word' }],
+          max_tokens: 10,
+        }, { headers: { 'Authorization': `Bearer ${groqKey}` }, timeout: 10000 });
+        results['groq'] = { ok: true, response: data?.choices?.[0]?.message?.content?.trim() };
       } catch (err) {
-        const msg = err.response?.data?.error?.message || err.message;
-        results[label] = { ok: false, error: msg.slice(0, 120) };
+        results['groq'] = { ok: false, error: (err.response?.data?.error?.message || err.message).slice(0, 100) };
       }
+    } else {
+      results['groq'] = { ok: false, error: 'GROQ_API_KEY not set' };
     }
 
-    res.json({ key_set: true, results });
+    // Test Gemini
+    const geminiKey = (process.env.GEMINI_API_KEY || '').trim();
+    if (geminiKey) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
+        const { data } = await axios.post(url, {
+          contents: [{ parts: [{ text: 'Say hello in one word' }] }],
+          generationConfig: { maxOutputTokens: 10 },
+        }, { timeout: 10000 });
+        results['gemini'] = { ok: true, response: data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() };
+      } catch (err) {
+        results['gemini'] = { ok: false, error: (err.response?.data?.error?.message || err.message).slice(0, 100) };
+      }
+    } else {
+      results['gemini'] = { ok: false, error: 'GEMINI_API_KEY not set' };
+    }
+
+    const anyWorking = Object.values(results).some(r => r.ok);
+    res.json({ ai_working: anyWorking, providers: results });
   } catch (err) {
     res.json({ ok: false, error: err.message });
   }

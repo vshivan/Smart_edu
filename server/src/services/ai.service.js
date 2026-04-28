@@ -2,18 +2,37 @@ const axios  = require('axios');
 const { pool } = require('../config/db');
 const { AppError } = require('../utils/errors');
 
-// ─── Gemini via direct HTTP (avoids SDK version/model issues) ────────────────
+// ─── AI Provider — supports Groq (primary) and Gemini (fallback) ─────────────
+
+const groqRequest = async (prompt, { jsonMode = false, maxTokens = 4096 } = {}) => {
+  const key = (process.env.GROQ_API_KEY || '').trim();
+  if (!key) return null; // no Groq key, fall through to Gemini
+
+  const body = {
+    model: (process.env.GROQ_MODEL || 'llama-3.1-8b-instant').trim(),
+    messages: [{ role: 'user', content: prompt }],
+    max_tokens: maxTokens,
+    temperature: 0.7,
+    ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
+  };
+
+  const { data } = await axios.post('https://api.groq.com/openai/v1/chat/completions', body, {
+    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    timeout: 60000,
+  });
+  return data?.choices?.[0]?.message?.content || '';
+};
+
 const GEMINI_ENDPOINTS = [
   { model: 'gemini-2.0-flash',   api: 'v1beta' },
   { model: 'gemini-1.5-flash',   api: 'v1beta' },
-  { model: 'gemini-1.5-pro',     api: 'v1beta' },
   { model: 'gemini-2.0-flash',   api: 'v1' },
   { model: 'gemini-pro',         api: 'v1beta' },
 ];
 
 const geminiRequest = async (prompt, { jsonMode = false, maxTokens = 4096 } = {}) => {
   const key = (process.env.GEMINI_API_KEY || '').trim();
-  if (!key) throw new AppError('GEMINI_API_KEY is not configured in Render environment variables.', 503);
+  if (!key) return null;
 
   const body = {
     contents: [{ parts: [{ text: prompt }] }],
@@ -32,24 +51,38 @@ const geminiRequest = async (prompt, { jsonMode = false, maxTokens = 4096 } = {}
         headers: { 'Content-Type': 'application/json' },
         timeout: 60000,
       });
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      return text;
+      return data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     } catch (err) {
       lastError = err;
       const status = err.response?.status;
-      const errMsg = err.response?.data?.error?.message || '';
-      // 404 = model not found, try next
-      // 429 = quota exceeded on this model, try next
       if (status !== 404 && status !== 429) break;
     }
   }
+  return null; // Gemini failed, fall through
+};
 
-  const errMsg = lastError?.response?.data?.error?.message || lastError?.message || 'Gemini API error';
-  // Check if it's a quota issue
-  if (errMsg.includes('quota') || errMsg.includes('Quota')) {
-    throw new AppError('AI quota exceeded. Please get a new Gemini API key from aistudio.google.com', 429);
+// Primary AI request — tries Groq first, then Gemini
+const aiRequest = async (prompt, options = {}) => {
+  // Try Groq first (faster, more reliable free tier)
+  try {
+    const result = await groqRequest(prompt, options);
+    if (result) return result;
+  } catch (err) {
+    console.warn('Groq failed:', err.message);
   }
-  throw new AppError(`AI generation failed: ${errMsg}`, 502);
+
+  // Fall back to Gemini
+  try {
+    const result = await aiRequest(prompt, options);
+    if (result) return result;
+  } catch (err) {
+    console.warn('Gemini failed:', err.message);
+  }
+
+  throw new AppError(
+    'AI service unavailable. Please add GROQ_API_KEY (free at console.groq.com) or a valid GEMINI_API_KEY to Render environment variables.',
+    503
+  );
 };
 
 // ─── Chat session helpers ─────────────────────────────────────────────────────
@@ -104,7 +137,7 @@ Return ONLY valid JSON (no markdown, no explanation):
 
 Rules: 4-6 modules, 3-5 lessons each.`;
 
-  const raw = await geminiRequest(prompt, { jsonMode: true, maxTokens: 4096 });
+  const raw = await aiRequest(prompt, { jsonMode: true, maxTokens: 4096 });
 
   // Extract JSON from response
   let parsed;
@@ -147,7 +180,7 @@ Return ONLY valid JSON:
   ]
 }`;
 
-  const raw = await geminiRequest(prompt, { jsonMode: true, maxTokens: 2000 });
+  const raw = await aiRequest(prompt, { jsonMode: true, maxTokens: 2000 });
 
   let parsed;
   try { parsed = JSON.parse(raw); } catch {
@@ -175,7 +208,7 @@ ${history ? `Conversation so far:\n${history}\n` : ''}
 Student: ${message}
 Tutor:`;
 
-  const reply = await geminiRequest(prompt, { maxTokens: 512 });
+  const reply = await aiRequest(prompt, { maxTokens: 512 });
 
   await appendMessages(session.id, [
     { role: 'user',      content: message, timestamp: new Date().toISOString() },
@@ -200,7 +233,7 @@ const getRecommendations = async ({ completed_subjects = [], interests = [], lev
 
 Level: ${level}/10, Completed: ${completed_subjects.join(', ') || 'None'}, Interests: ${interests.join(', ') || 'General'}`;
 
-  const raw = await geminiRequest(prompt, { jsonMode: true, maxTokens: 800 });
+  const raw = await aiRequest(prompt, { jsonMode: true, maxTokens: 800 });
   try { return JSON.parse(raw); } catch {
     throw new AppError('AI returned invalid recommendations', 500);
   }
