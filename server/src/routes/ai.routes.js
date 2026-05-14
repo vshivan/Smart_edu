@@ -51,7 +51,8 @@ router.post('/generate-and-save', authorize('learner', 'admin'), async (req, res
           [
             module.id,
             lesson.title,
-            `This lesson covers: ${lesson.title}. ${(lesson.key_concepts || []).join(', ')}`,
+            // Use AI-generated content if available, otherwise a placeholder
+            lesson.content || `## ${lesson.title}\n\n${(lesson.key_concepts || []).map(k => `- ${k}`).join('\n') || 'Content coming soon.'}`,
             lesson.estimated_minutes || lesson.duration_min || 10,
             li,
             lesson.xp_reward || 10,
@@ -60,14 +61,17 @@ router.post('/generate-and-save', authorize('learner', 'admin'), async (req, res
         totalLessons++;
       }
 
-      // 4. Auto-generate a quiz for each module (non-blocking — don't fail if quiz gen fails)
+      // 4. Save module quiz if AI generated one, otherwise generate separately
+      const moduleQuiz = mod.quiz;
       try {
-        const quizData = await svc.generateQuiz({
-          topic: mod.title,
-          difficulty,
-          num_questions: 5,
-          course_context: `Course: ${outline.title}. Module: ${mod.title}`,
-        });
+        const quizData = moduleQuiz?.questions?.length
+          ? moduleQuiz
+          : await svc.generateQuiz({
+              topic: mod.title,
+              difficulty,
+              num_questions: 5,
+              course_context: `Course: ${outline.title}. Module: ${mod.title}`,
+            });
 
         const { rows: [quiz] } = await pool.query(
           `INSERT INTO quizzes (course_id, title, quiz_type, pass_score, max_attempts, xp_reward, xp_perfect)

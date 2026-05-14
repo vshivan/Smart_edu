@@ -38,7 +38,10 @@ const awardXP = async (userId, amount, reason) => {
   const r = await getRedis();
   await r.zAdd('leaderboard:global', [{ score: xp_total, value: userId }]);
 
-  return { xp_total, level: newLevel, leveled_up: leveledUp };
+  const nextLevel = LEVELS.find((l) => l.level === newLevel.level + 1);
+  const xp_to_next_level = nextLevel ? nextLevel.xp_required - xp_total : 0;
+
+  return { xp_total, level: newLevel, leveled_up: leveledUp, xp_to_next_level };
 };
 
 const checkStreak = async (userId) => {

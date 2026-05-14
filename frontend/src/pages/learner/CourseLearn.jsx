@@ -8,6 +8,76 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../../store/authStore';
+
+// ── Inline markdown renderer (same as GenerateCourse) ────────────────────────
+function renderInline(text) {
+  const parts = [];
+  const regex = /(\*\*(.+?)\*\*|`([^`]+)`)/g;
+  let last = 0, match, key = 0;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > last) parts.push(<span key={key++}>{text.slice(last, match.index)}</span>);
+    if (match[0].startsWith('**'))
+      parts.push(<strong key={key++} className="font-semibold text-text-primary dark:text-white">{match[2]}</strong>);
+    else
+      parts.push(<code key={key++} className="bg-slate-100 dark:bg-slate-800 text-brand-700 dark:text-brand-300 px-1.5 py-0.5 rounded text-xs font-mono">{match[3]}</code>);
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) parts.push(<span key={key++}>{text.slice(last)}</span>);
+  return parts.length > 0 ? parts : text;
+}
+
+function LessonContent({ content }) {
+  if (!content) return null;
+  const lines = content.split('\n');
+  const elements = [];
+  let i = 0, key = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Fenced code block
+    if (line.trimStart().startsWith('```')) {
+      const codeLines = [];
+      i++;
+      while (i < lines.length && !lines[i].trimStart().startsWith('```')) { codeLines.push(lines[i]); i++; }
+      elements.push(
+        <pre key={key++} className="bg-slate-900 text-emerald-400 p-4 rounded-xl text-xs font-mono overflow-x-auto my-3 whitespace-pre-wrap">
+          {codeLines.join('\n')}
+        </pre>
+      );
+      i++; continue;
+    }
+    if (line.startsWith('## ')) { elements.push(<h2 key={key++} className="text-base font-bold text-text-primary dark:text-white mt-5 mb-2">{renderInline(line.slice(3))}</h2>); i++; continue; }
+    if (line.startsWith('### ')) { elements.push(<h3 key={key++} className="text-sm font-semibold text-text-primary dark:text-white mt-4 mb-1">{renderInline(line.slice(4))}</h3>); i++; continue; }
+    if (line.startsWith('# ')) { elements.push(<h2 key={key++} className="text-lg font-bold text-text-primary dark:text-white mt-5 mb-2">{renderInline(line.slice(2))}</h2>); i++; continue; }
+
+    // Bullet list
+    if (line.trimStart().startsWith('- ') || line.trimStart().startsWith('* ')) {
+      const items = [];
+      while (i < lines.length && (lines[i].trimStart().startsWith('- ') || lines[i].trimStart().startsWith('* '))) {
+        items.push(<li key={i} className="text-sm text-text-secondary dark:text-slate-300 leading-relaxed">{renderInline(lines[i].trimStart().slice(2))}</li>);
+        i++;
+      }
+      elements.push(<ul key={key++} className="list-disc list-inside space-y-1 my-2 pl-2">{items}</ul>);
+      continue;
+    }
+    // Numbered list
+    if (/^\d+\.\s/.test(line.trimStart())) {
+      const items = [];
+      while (i < lines.length && /^\d+\.\s/.test(lines[i].trimStart())) {
+        items.push(<li key={i} className="text-sm text-text-secondary dark:text-slate-300 leading-relaxed">{renderInline(lines[i].trimStart().replace(/^\d+\.\s/, ''))}</li>);
+        i++;
+      }
+      elements.push(<ol key={key++} className="list-decimal list-inside space-y-1 my-2 pl-2">{items}</ol>);
+      continue;
+    }
+    if (line.trim() === '') { elements.push(<div key={key++} className="h-2" />); i++; continue; }
+    elements.push(<p key={key++} className="text-sm text-text-secondary dark:text-slate-300 leading-relaxed">{renderInline(line)}</p>);
+    i++;
+  }
+  return <div className="space-y-1">{elements}</div>;
+}
 
 // ── Certificate Modal ─────────────────────────────────────────────────────────
 function CertificateModal({ cert, onClose }) {
@@ -261,6 +331,8 @@ export default function CourseLearn() {
     },
   });
 
+  const { user, updateUser } = useAuthStore();
+
   const completeMutation = useMutation({
     mutationFn: (lessonId) => api.post(`/courses/${courseId}/lessons/${lessonId}/complete`),
     onSuccess: async (data) => {
@@ -269,12 +341,23 @@ export default function CourseLearn() {
       qc.invalidateQueries(['course', courseId]);
       qc.invalidateQueries(['gamification-profile']);
       qc.invalidateQueries(['enrollments']);
-      api.post('/gamification/xp', { amount: xp, reason: 'lesson_complete' }).catch(() => {});
+
+      // Award XP and update sidebar immediately
+      try {
+        const { data: xpData } = await api.post('/gamification/xp', { amount: xp, reason: 'lesson_complete' });
+        // Update authStore so sidebar XP/level reflects immediately
+        if (xpData?.data) {
+          updateUser({
+            xp:          xpData.data.xp_total,
+            level:       xpData.data.level?.level || xpData.data.level,
+            xp_to_next:  xpData.data.xp_to_next_level,
+          });
+        }
+      } catch {}
 
       // Check if course is now 100% complete
       const updated = await api.get(`/courses/${courseId}`).then(r => r.data.data);
       if (updated?.progress_pct >= 100) {
-        // Show rating modal first, then offer certificate
         setTimeout(() => setShowRating(true), 800);
       }
     },
@@ -482,10 +565,8 @@ export default function CourseLearn() {
 
                 {/* Content */}
                 <div className="card dark:bg-dark-card dark:border-dark-border mb-4">
-                  {lesson.content_text ? (
-                    <div className="text-text-secondary dark:text-slate-300 leading-relaxed whitespace-pre-wrap text-sm">
-                      {lesson.content_text}
-                    </div>
+                  {lesson.content_text || lesson.content ? (
+                    <LessonContent content={lesson.content_text || lesson.content} />
                   ) : (
                     <div className="text-center py-12">
                       <BookOpen size={32} className="text-text-muted mx-auto mb-3" />

@@ -88,14 +88,48 @@ const getCourseById = async (id, userId) => {
 };
 
 const createCourse = async (data, creatorId) => {
-  const { title, description, subject, difficulty, estimated_hours, price, is_free, tags } = data;
+  const { title, description, subject, difficulty, estimated_hours, price, is_free, tags, modules } = data;
+
+  // Insert course
   const { rows } = await pool.query(
-    `INSERT INTO courses (title, description, subject, difficulty, estimated_hours, price, is_free, tags, creator_id, creator_type)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'tutor')
+    `INSERT INTO courses (title, description, subject, difficulty, estimated_hours, price, is_free, tags, creator_id, creator_type, is_published)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'tutor',true)
      RETURNING *`,
     [title, description, subject, difficulty, estimated_hours, price || 0, is_free ?? true, tags || [], creatorId]
   );
-  return rows[0];
+  const course = rows[0];
+
+  // If modules with lessons are provided (AI-generated course), save them
+  if (modules && modules.length > 0) {
+    for (let mi = 0; mi < modules.length; mi++) {
+      const mod = modules[mi];
+      const { rows: modRows } = await pool.query(
+        `INSERT INTO course_modules (course_id, title, description, order_index, is_locked)
+         VALUES ($1,$2,$3,$4,false) RETURNING id`,
+        [course.id, mod.title, mod.description || '', mi]
+      );
+      const moduleId = modRows[0].id;
+
+      const lessons = mod.lessons || [];
+      for (let li = 0; li < lessons.length; li++) {
+        const lesson = lessons[li];
+        await pool.query(
+          `INSERT INTO course_lessons (module_id, title, content_type, content_text, duration_min, order_index, xp_reward)
+           VALUES ($1,$2,'text',$3,$4,$5,$6)`,
+          [
+            moduleId,
+            lesson.title,
+            lesson.content || '',                          // AI-generated markdown content
+            lesson.estimated_minutes || lesson.duration_min || 10,
+            li,
+            lesson.xp_reward || 10,
+          ]
+        );
+      }
+    }
+  }
+
+  return course;
 };
 
 const updateCourse = async (id, data, userId, role) => {
