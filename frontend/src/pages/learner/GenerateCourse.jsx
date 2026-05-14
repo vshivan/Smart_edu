@@ -4,7 +4,7 @@ import {
   Sparkles, ChevronDown, Loader2, BookOpen,
   Clock, Target, X, Check, Search, Plus,
 } from 'lucide-react';
-import api from '../../lib/api';
+import api, { aiApi } from '../../lib/api';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { SUBJECTS, getTopics } from '../../lib/subjectTopics';
@@ -199,9 +199,34 @@ export default function GenerateCourse() {
     difficulty:      'beginner',
     estimated_hours: 10,
   });
-  const [loading, setLoading] = useState(false);
-  const [result,  setResult]  = useState(null);
+  const [loading,   setLoading]   = useState(false);
+  const [progress,  setProgress]  = useState(0);   // 0-100 fake progress bar
+  const [stage,     setStage]     = useState('');   // current stage label
+  const [result,    setResult]    = useState(null);
+  const progressTimer = useRef(null);
   const navigate = useNavigate();
+
+  // Fake progress bar — increments slowly while AI is working
+  const startProgress = () => {
+    setProgress(0);
+    setStage('Designing course structure...');
+    let p = 0;
+    progressTimer.current = setInterval(() => {
+      p += Math.random() * 3;
+      if (p >= 30 && p < 60) setStage('Generating lesson content...');
+      if (p >= 60 && p < 85) setStage('Creating module quizzes...');
+      if (p >= 85) setStage('Saving to database...');
+      if (p >= 95) { p = 95; clearInterval(progressTimer.current); }
+      setProgress(Math.min(p, 95));
+    }, 800);
+  };
+
+  const stopProgress = (success = true) => {
+    clearInterval(progressTimer.current);
+    setProgress(success ? 100 : 0);
+    setStage(success ? 'Done!' : '');
+    if (success) setTimeout(() => setProgress(0), 1000);
+  };
 
   // Reset topics when subject changes
   const handleSubjectChange = (subject) => {
@@ -214,20 +239,25 @@ export default function GenerateCourse() {
     if (!form.subject.trim()) return toast.error('Please select a subject');
     setLoading(true);
     setResult(null);
+    startProgress();
     try {
-      // generate-and-save: creates course + modules + lessons + quizzes + enrolls in one call
-      const { data } = await api.post('/ai/generate-and-save', {
+      // Use aiApi (3 min timeout) instead of api (30s) — generation takes 60-120s
+      const { data } = await aiApi.post('/ai/generate-and-save', {
         subject:         form.subject,
         topics:          form.custom_topics,
         difficulty:      form.difficulty,
         estimated_hours: form.estimated_hours,
       });
+      stopProgress(true);
       setResult(data.data);
       toast.success(data.data.message || 'Course generated and saved!');
     } catch (err) {
-      const msg = err.response?.data?.message || 'Generation failed';
-      if (msg.includes('GEMINI_API_KEY') || msg.includes('not configured')) {
-        toast.error('AI not configured — add GEMINI_API_KEY to Render environment variables.');
+      stopProgress(false);
+      const msg = err.response?.data?.message || err.message || 'Generation failed';
+      if (err.code === 'ECONNABORTED' || msg.includes('timeout')) {
+        toast.error('Generation is taking longer than expected. Check your Dashboard — the course may have been saved already.', { duration: 6000 });
+      } else if (msg.includes('API_KEY') || msg.includes('not configured') || msg.includes('unavailable')) {
+        toast.error('AI not configured — add GROQ_API_KEY or GEMINI_API_KEY in Render environment variables.', { duration: 6000 });
       } else {
         toast.error(msg);
       }
@@ -328,17 +358,48 @@ export default function GenerateCourse() {
             </div>
           </div>
 
-          {/* Generate button */}
-          <button
-            type="submit"
-            disabled={loading || !form.subject}
-            className="btn-primary w-full py-3 flex items-center justify-center gap-2 text-sm"
-          >
-            {loading
-              ? <><Loader2 size={16} className="animate-spin" /> Generating with AI...</>
-              : <><Sparkles size={16} /> Generate Course</>
-            }
-          </button>
+          {/* Generate button + progress */}
+          <div className="space-y-3">
+            <button
+              type="submit"
+              disabled={loading || !form.subject}
+              className="btn-primary w-full py-3 flex items-center justify-center gap-2 text-sm"
+            >
+              {loading
+                ? <><Loader2 size={16} className="animate-spin" /> {stage || 'Generating with AI...'}</>
+                : <><Sparkles size={16} /> Generate Course</>
+              }
+            </button>
+
+            {/* Progress bar — shown during generation */}
+            <AnimatePresence>
+              {loading && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs text-text-muted">
+                      <span>{stage}</span>
+                      <span>{Math.round(progress)}%</span>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full bg-gradient-to-r from-brand-500 to-brand-400 rounded-full"
+                        animate={{ width: `${progress}%` }}
+                        transition={{ duration: 0.5, ease: 'easeOut' }}
+                      />
+                    </div>
+                    <p className="text-xs text-text-muted text-center">
+                      ⏳ AI is generating full lesson content + quizzes — this takes 60-90 seconds
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </form>
       </div>
 
