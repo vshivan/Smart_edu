@@ -74,15 +74,52 @@ const getCourseById = async (id, userId) => {
     course.progress_pct = enroll.rows[0]?.progress_pct || 0;
   }
 
+  // Fetch modules with lessons + completion status
   const modules = await pool.query(
-    `SELECT m.*, json_agg(l ORDER BY l.order_index) AS lessons
+    `SELECT m.*,
+       json_agg(
+         json_build_object(
+           'id',              l.id,
+           'title',           l.title,
+           'content_type',    l.content_type,
+           'content_text',    l.content_text,
+           'duration_min',    l.duration_min,
+           'order_index',     l.order_index,
+           'xp_reward',       l.xp_reward,
+           'is_preview',      l.is_preview,
+           'completed',       COALESCE(lp.completed, false)
+         ) ORDER BY l.order_index
+       ) AS lessons
      FROM course_modules m
      LEFT JOIN course_lessons l ON l.module_id = m.id
+     LEFT JOIN lesson_progress lp
+       ON lp.lesson_id = l.id AND lp.learner_id = $2
      WHERE m.course_id = $1
      GROUP BY m.id ORDER BY m.order_index`,
-    [id]
+    [id, userId || null]
   );
   course.modules = modules.rows;
+
+  // Fetch quizzes per module so CourseLearn can show a "Take Quiz" button
+  const quizzes = await pool.query(
+    `SELECT q.id, q.title, q.course_id, q.pass_score, q.max_attempts, q.xp_reward,
+            COUNT(qq.id) AS question_count,
+            COUNT(qa.id) FILTER (WHERE qa.learner_id = $2) AS attempts_used
+     FROM quizzes q
+     LEFT JOIN quiz_questions qq ON qq.quiz_id = q.id
+     LEFT JOIN quiz_attempts qa ON qa.quiz_id = q.id AND qa.learner_id = $2
+     WHERE q.course_id = $1
+     GROUP BY q.id
+     ORDER BY q.created_at`,
+    [id, userId || null]
+  );
+
+  // Attach quizzes to their modules — one quiz per module (matched by order)
+  const quizList = quizzes.rows;
+  course.modules = course.modules.map((mod, idx) => ({
+    ...mod,
+    quiz: quizList[idx] || null,   // assign quiz by module order index
+  }));
 
   return course;
 };

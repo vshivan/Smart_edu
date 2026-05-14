@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle, BookOpen, Zap, Circle, ChevronDown, ChevronRight,
-  FileText, Star, Award, Lock, AlertCircle, Download, X
+  FileText, Star, Award, Lock, AlertCircle, Download, X,
+  HelpCircle, Trophy, RotateCcw, Play
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../lib/api';
@@ -77,6 +78,155 @@ function LessonContent({ content }) {
     i++;
   }
   return <div className="space-y-1">{elements}</div>;
+}
+
+// ── Module Quiz Panel ─────────────────────────────────────────────────────────
+function ModuleQuizPanel({ quiz, onClose }) {
+  const [quizData,  setQuizData]  = useState(null);
+  const [loading,   setLoading]   = useState(true);
+  const [answers,   setAnswers]   = useState({});
+  const [result,    setResult]    = useState(null);
+  const [submitting,setSubmitting]= useState(false);
+  const [current,   setCurrent]   = useState(0);
+
+  useEffect(() => {
+    api.get(`/quizzes/${quiz.id}`)
+      .then(r => { setQuizData(r.data.data); setLoading(false); })
+      .catch(() => { toast.error('Failed to load quiz'); onClose(); });
+  }, [quiz.id]);
+
+  const getOptionLetter = (opt) => {
+    if (!opt) return '';
+    const m = opt.match(/^([A-D])[).\s]/);
+    return m ? m[1] : opt.charAt(0).toUpperCase();
+  };
+
+  const getOptions = (options) => {
+    if (!options) return [];
+    if (Array.isArray(options)) return options.map((opt, i) => ({ key: String.fromCharCode(65 + i), label: opt }));
+    return Object.entries(options).map(([key, label]) => ({ key, label }));
+  };
+
+  const handleSubmit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    const payload = Object.entries(answers).map(([question_id, answer]) => ({ question_id, answer }));
+    try {
+      const { data } = await api.post(`/quizzes/${quiz.id}/attempt`, { answers: payload, time_taken_s: 0 });
+      setResult(data.data);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Submission failed');
+      setSubmitting(false);
+    }
+  };
+
+  const retake = () => { setAnswers({}); setResult(null); setCurrent(0); setSubmitting(false); };
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-12">
+      <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  const questions = quizData?.questions || [];
+  const q = questions[current];
+  const options = getOptions(q?.options);
+  const allAnswered = Object.keys(answers).length === questions.length;
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      {/* Quiz header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <HelpCircle size={18} className="text-amber-500" />
+          <h3 className="font-bold text-text-primary">{quizData?.title || quiz.title}</h3>
+          <span className="badge-yellow text-xs">{questions.length} questions</span>
+        </div>
+        <button onClick={onClose} className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-hover rounded-lg transition-all">
+          <X size={16} />
+        </button>
+      </div>
+
+      {/* Result screen */}
+      {result ? (
+        <div className="text-center py-6 space-y-4">
+          <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto border-4 ${
+            result.passed ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300'
+          }`}>
+            {result.passed ? <Trophy size={36} className="text-emerald-500" /> : <X size={36} className="text-red-500" />}
+          </div>
+          <div>
+            <p className="text-3xl font-extrabold text-text-primary">{result.score}%</p>
+            <p className={`font-semibold mt-1 ${result.passed ? 'text-emerald-600' : 'text-red-500'}`}>
+              {result.passed ? '🎉 Passed!' : 'Not quite — try again'}
+            </p>
+            {result.xp_earned > 0 && <p className="text-brand-600 font-semibold text-sm mt-1">+{result.xp_earned} XP earned!</p>}
+          </div>
+          <div className="flex gap-3 justify-center">
+            <button onClick={onClose} className="btn-secondary text-sm">Close</button>
+            {!result.passed && result.attempts_remaining > 0 && (
+              <button onClick={retake} className="btn-primary text-sm flex items-center gap-2">
+                <RotateCcw size={14} /> Retry ({result.attempts_remaining} left)
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Progress */}
+          <div className="flex items-center justify-between text-xs text-text-muted mb-1">
+            <span>Question {current + 1} of {questions.length}</span>
+            <span>{Object.keys(answers).length} answered</span>
+          </div>
+          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-4">
+            <div className="h-full bg-brand-500 rounded-full transition-all" style={{ width: `${((current + 1) / questions.length) * 100}%` }} />
+          </div>
+
+          {/* Question */}
+          <AnimatePresence mode="wait">
+            <motion.div key={current} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} className="card">
+              <p className="font-semibold text-text-primary mb-4 leading-relaxed">{q?.question_text}</p>
+              <div className="space-y-2">
+                {options.map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setAnswers(a => ({ ...a, [q.id]: key }))}
+                    className={`w-full text-left px-4 py-3 rounded-xl border text-sm transition-all ${
+                      answers[q?.id] === key
+                        ? 'bg-brand-50 border-brand-400 text-brand-800 ring-1 ring-brand-200'
+                        : 'bg-white border-surface-border text-text-secondary hover:border-slate-300 hover:bg-surface-hover'
+                    }`}
+                  >
+                    <span className="font-bold text-brand-600 mr-3">{key}.</span>{label}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Navigation */}
+          <div className="flex justify-between">
+            <button onClick={() => setCurrent(c => Math.max(0, c - 1))} disabled={current === 0} className="btn-secondary text-sm">
+              Previous
+            </button>
+            {current < questions.length - 1 ? (
+              <button onClick={() => setCurrent(c => c + 1)} disabled={!answers[q?.id]} className="btn-primary text-sm flex items-center gap-2">
+                Next <ChevronRight size={14} />
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmit}
+                disabled={submitting || !allAnswered}
+                className="btn-primary text-sm flex items-center gap-2"
+              >
+                {submitting ? 'Submitting...' : <><CheckCircle size={14} /> Submit Quiz</>}
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </motion.div>
+  );
 }
 
 // ── Certificate Modal ─────────────────────────────────────────────────────────
@@ -316,7 +466,8 @@ export default function CourseLearn() {
   const [showNotes,       setShowNotes]       = useState(false);
   const [showRating,      setShowRating]      = useState(false);
   const [certificate,     setCertificate]     = useState(null);
-  const [masteryBlocked,  setMasteryBlocked]  = useState(null); // module title that's blocked
+  const [masteryBlocked,  setMasteryBlocked]  = useState(null);
+  const [activeQuiz,      setActiveQuiz]      = useState(null); // quiz being taken
 
   const { data: course, isLoading } = useQuery({
     queryKey: ['course', courseId],
@@ -498,6 +649,24 @@ export default function CourseLearn() {
                             )}
                           </button>
                         ))}
+
+                        {/* Module quiz button */}
+                        {mod.quiz && (
+                          <button
+                            onClick={() => { setActiveQuiz(mod.quiz); setActiveLesson(null); }}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm transition-all text-left ml-2 mt-1 border ${
+                              activeQuiz?.id === mod.quiz.id
+                                ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700/50 text-amber-700 dark:text-amber-400'
+                                : 'border-amber-200 dark:border-amber-800/40 text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                            }`}
+                          >
+                            <HelpCircle size={13} className="shrink-0" />
+                            <span className="flex-1 line-clamp-1 text-xs font-medium">Module Quiz</span>
+                            <span className="text-[10px] font-semibold shrink-0">
+                              {mod.quiz.attempts_used > 0 ? '✓ Done' : `+${mod.quiz.xp_reward} XP`}
+                            </span>
+                          </button>
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -522,7 +691,15 @@ export default function CourseLearn() {
         {/* ── Main content ─────────────────────────────────────────────── */}
         <div className="flex-1 flex overflow-hidden">
           <main className="flex-1 overflow-y-auto bg-surface dark:bg-dark-bg">
-            {lesson ? (
+            {activeQuiz ? (
+              /* ── Quiz panel ─────────────────────────────────────────── */
+              <div className="max-w-2xl mx-auto p-6 md:p-8">
+                <ModuleQuizPanel
+                  quiz={activeQuiz}
+                  onClose={() => { setActiveQuiz(null); qc.invalidateQueries(['course', courseId]); }}
+                />
+              </div>
+            ) : lesson ? (
               <div className="max-w-3xl mx-auto p-6 md:p-8">
                 {/* Lesson header */}
                 <div className="flex items-start justify-between mb-6 gap-4">
