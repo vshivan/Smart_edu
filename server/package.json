@@ -10,11 +10,13 @@
     "db:migrate": "node scripts/migrate.js",
     "test": "jest --runInBand --forceExit --detectOpenHandles",
     "test:verbose": "jest --runInBand --forceExit --detectOpenHandles --verbose",
-    "test:coverage": "jest --runInBand --forceExit --detectOpenHandles --coverage"
+    "test:coverage": "jest --runInBand --forceExit --detectOpenHandles --coverage",
+    "test:remote": "cross-env TEST_BASE_URL=https://smart-edu-ed5y.onrender.com jest --runInBand --forceExit --detectOpenHandles --verbose"
   },
   "jest": {
     "testEnvironment": "node",
-    "testTimeout": 30000,
+    "testTimeout": 60000,
+    "globalSetup": "./tests/helpers/globalSetup.js",
     "testMatch": [
       "**/tests/**/*.test.js"
     ]
@@ -44,6 +46,7 @@
   },
   "devDependencies": {
     "@jest/globals": "^30.3.0",
+    "cross-env": "^7.0.3",
     "jest": "^30.3.0",
     "nodemon": "^3.1.3",
     "supertest": "^7.2.2"

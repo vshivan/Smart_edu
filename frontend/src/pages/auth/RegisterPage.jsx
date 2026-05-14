@@ -106,7 +106,8 @@ export default function RegisterPage() {
     const timer = setTimeout(async () => {
       try {
         const { data } = await api.get(`/users/check-email?email=${encodeURIComponent(form.email)}`);
-        if (data.data?.available) {          setEmailStatus('ok');
+        if (data.data?.available) {
+          setEmailStatus('ok');
           setEmailMsg('Email is available');
         } else {
           setEmailStatus('error');
@@ -116,27 +117,15 @@ export default function RegisterPage() {
         setEmailStatus(null);
         setEmailMsg('');
       }
-    }, 600); // debounce 600ms
+    }, 800); // debounce 800ms — reduce API calls
 
     return () => clearTimeout(timer);
   }, [form.email]);
 
-  // ── Real-time name check (no two accounts same full name) ─────────────────
+  // ── Real-time name validation (local only — no API call needed) ──────────────
   useEffect(() => {
     if (!form.first_name || !form.last_name) { setNameStatus(null); return; }
-    setNameStatus('checking');
-    const timer = setTimeout(async () => {
-      try {
-        const { data } = await api.get(
-          `/users/check-email?name=${encodeURIComponent(`${form.first_name} ${form.last_name}`)}`
-        );
-        // We use the same endpoint — backend doesn't check name yet, so just show ok
-        setNameStatus('ok');
-      } catch {
-        setNameStatus(null);
-      }
-    }, 500);
-    return () => clearTimeout(timer);
+    setNameStatus('ok');
   }, [form.first_name, form.last_name]);
 
   const pwStrength = form.password ? passwordStrength(form.password) : null;
@@ -365,12 +354,14 @@ export default function RegisterPage() {
             {/* Submit */}
             <motion.button
               type="submit"
-              disabled={loading || emailStatus === 'error' || emailStatus === 'checking'}
+              disabled={loading || emailStatus === 'error'}
               whileTap={{ scale: 0.98 }}
               className="btn-primary w-full py-3 text-sm mt-1 flex items-center justify-center gap-2"
             >
               {loading
                 ? <><Loader2 size={16} className="animate-spin" /> Creating account...</>
+                : emailStatus === 'checking'
+                ? <><Loader2 size={16} className="animate-spin" /> Checking email...</>
                 : 'Create Account'
               }
             </motion.button>
