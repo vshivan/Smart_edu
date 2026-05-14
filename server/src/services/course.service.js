@@ -100,26 +100,43 @@ const getCourseById = async (id, userId) => {
   );
   course.modules = modules.rows;
 
-  // Fetch quizzes per module so CourseLearn can show a "Take Quiz" button
+  // Fetch quizzes per module — match by module_id stored on quiz
+  // Quizzes are linked to course_id, so we match by creation order
   const quizzes = await pool.query(
     `SELECT q.id, q.title, q.course_id, q.pass_score, q.max_attempts, q.xp_reward,
-            COUNT(qq.id) AS question_count,
-            COUNT(qa.id) FILTER (WHERE qa.learner_id = $2) AS attempts_used
+            COUNT(qq.id)::int AS question_count,
+            COALESCE(
+              (SELECT COUNT(*) FROM quiz_attempts qa2
+               WHERE qa2.quiz_id = q.id AND qa2.learner_id = $2 AND qa2.passed = true),
+              0
+            )::int AS passed_attempts,
+            COALESCE(
+              (SELECT COUNT(*) FROM quiz_attempts qa3
+               WHERE qa3.quiz_id = q.id AND qa3.learner_id = $2),
+              0
+            )::int AS attempts_used
      FROM quizzes q
      LEFT JOIN quiz_questions qq ON qq.quiz_id = q.id
-     LEFT JOIN quiz_attempts qa ON qa.quiz_id = q.id AND qa.learner_id = $2
      WHERE q.course_id = $1
      GROUP BY q.id
      ORDER BY q.created_at`,
     [id, userId || null]
   );
 
-  // Attach quizzes to their modules — one quiz per module (matched by order)
+  // Match quizzes to modules by order index
   const quizList = quizzes.rows;
-  course.modules = course.modules.map((mod, idx) => ({
-    ...mod,
-    quiz: quizList[idx] || null,   // assign quiz by module order index
-  }));
+  course.modules = course.modules.map((mod, idx) => {
+    const quiz = quizList[idx] || null;
+    // A module is "completed" when all lessons done AND quiz passed (or no quiz)
+    const allLessonsDone = (mod.lessons || []).every(l => l?.completed);
+    const quizPassed = !quiz || quiz.passed_attempts > 0;
+    return {
+      ...mod,
+      quiz,
+      all_lessons_done: allLessonsDone,
+      is_completed:     allLessonsDone && quizPassed,
+    };
+  });
 
   return course;
 };

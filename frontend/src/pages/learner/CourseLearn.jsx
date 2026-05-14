@@ -519,14 +519,14 @@ export default function CourseLearn() {
     setExpandedModules(prev => ({ ...prev, [moduleId]: !prev[moduleId] }));
   };
 
-  // Mastery check: can learner access this module?
+  // Module unlock: module 0 always accessible.
+  // Subsequent modules unlock only when previous module is fully completed
+  // (all lessons done + quiz passed if quiz exists)
   const canAccessModule = useCallback((moduleIndex) => {
     if (moduleIndex === 0) return true;
     const prevModule = course?.modules?.[moduleIndex - 1];
     if (!prevModule) return true;
-    // Check if all lessons in previous module are complete
-    const allLessonsDone = (prevModule.lessons || []).every(l => l?.completed);
-    return allLessonsDone;
+    return prevModule.is_completed === true;
   }, [course]);
 
   const handleLessonClick = (lesson, moduleIndex) => {
@@ -618,9 +618,21 @@ export default function CourseLearn() {
                     }
                     <span className="flex-1 text-left">{mi + 1}. {mod.title}</span>
                     <span className="text-[10px] font-normal normal-case">
-                      {(mod.lessons || []).filter(l => l?.completed).length}/{(mod.lessons || []).length}
+                      {mod.is_completed
+                        ? <CheckCircle size={10} className="text-emerald-500" />
+                        : `${(mod.lessons || []).filter(l => l?.completed).length}/${(mod.lessons || []).length}`
+                      }
                     </span>
                   </button>
+
+                  {/* Unlock hint for locked modules */}
+                  {!accessible && mi > 0 && (
+                    <div className="mx-2 mb-1 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/20 rounded-lg">
+                      <p className="text-[10px] text-amber-600 dark:text-amber-500 flex items-center gap-1">
+                        <Lock size={9} /> Complete Module {mi} lessons + quiz to unlock
+                      </p>
+                    </div>
+                  )}
 
                   <AnimatePresence>
                     {expandedModules[mod.id] && accessible && (
@@ -743,12 +755,48 @@ export default function CourseLearn() {
                 {/* Content */}
                 <div className="card dark:bg-dark-card dark:border-dark-border mb-4">
                   {lesson.content_text || lesson.content ? (
-                    <LessonContent content={lesson.content_text || lesson.content} />
+                    <>
+                      <LessonContent content={lesson.content_text || lesson.content} />
+                      {/* Show regenerate button if content looks like a placeholder */}
+                      {(lesson.content_text || '').length < 200 && (
+                        <div className="mt-4 pt-4 border-t border-surface-border">
+                          <button
+                            onClick={async () => {
+                              toast.loading('Regenerating content...', { id: 'regen' });
+                              try {
+                                await api.post(`/courses/${courseId}/regenerate-content`);
+                                toast.success('Content regenerated! Refreshing...', { id: 'regen' });
+                                qc.invalidateQueries(['course', courseId]);
+                              } catch {
+                                toast.error('Regeneration failed', { id: 'regen' });
+                              }
+                            }}
+                            className="flex items-center gap-2 text-xs text-brand-600 hover:text-brand-700 font-medium"
+                          >
+                            <Zap size={12} /> Regenerate full content with AI
+                          </button>
+                        </div>
+                      )}
+                    </>
                   ) : (
-                    <div className="text-center py-12">
+                    <div className="text-center py-8">
                       <BookOpen size={32} className="text-text-muted mx-auto mb-3" />
-                      <p className="font-medium text-text-primary dark:text-white mb-1">Lesson content</p>
-                      <p className="text-text-muted text-sm">Content will appear here once added.</p>
+                      <p className="font-medium text-text-primary dark:text-white mb-2">No content yet</p>
+                      <button
+                        onClick={async () => {
+                          toast.loading('Generating content...', { id: 'regen' });
+                          try {
+                            await api.post(`/courses/${courseId}/regenerate-content`);
+                            toast.success('Content generated!', { id: 'regen' });
+                            qc.invalidateQueries(['course', courseId]);
+                          } catch {
+                            toast.error('Generation failed', { id: 'regen' });
+                          }
+                        }}
+                        className="btn-primary text-sm flex items-center gap-2 mx-auto"
+                      >
+                        <Zap size={14} /> Generate Content with AI
+                      </button>
                     </div>
                   )}
                 </div>

@@ -326,4 +326,4 @@ Level: ${level}/10, Completed: ${completed_subjects.join(', ') || 'None'}, Inter
   }
 };
 
-module.exports = { generateCourse, generateQuiz, chat, summarizeLesson, getRecommendations };
+module.exports = { generateCourse, generateQuiz, chat, summarizeLesson, getRecommendations, aiRequest };

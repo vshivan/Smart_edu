@@ -28,6 +28,69 @@ router.post('/:id/enroll', authenticate, authorize('learner'), async (req, res, 
   catch (e) { next(e); }
 });
 
+// ── Regenerate content for all lessons in a course (fixes placeholder content) ──
+router.post('/:id/regenerate-content', authenticate, async (req, res, next) => {
+  try {
+    const { pool } = require('../config/db');
+    const aiSvc = require('../services/ai.service');
+
+    // Get course info
+    const { rows: [course] } = await pool.query(
+      'SELECT title, subject, difficulty FROM courses WHERE id = $1',
+      [req.params.id]
+    );
+    if (!course) throw new (require('../utils/errors').AppError)('Course not found', 404);
+
+    // Get all lessons that have placeholder/empty content
+    const { rows: lessons } = await pool.query(
+      `SELECT cl.id, cl.title, cl.content_text, cm.title AS module_title
+       FROM course_lessons cl
+       JOIN course_modules cm ON cl.module_id = cm.id
+       WHERE cm.course_id = $1
+       ORDER BY cm.order_index, cl.order_index`,
+      [req.params.id]
+    );
+
+    let updated = 0;
+    // Regenerate content for lessons with placeholder/short content
+    for (const lesson of lessons) {
+      const isPlaceholder = !lesson.content_text
+        || lesson.content_text.length < 100
+        || lesson.content_text.includes('Content coming soon')
+        || lesson.content_text.includes('This lesson covers the fundamentals');
+
+      if (isPlaceholder) {
+        try {
+          const prompt = `Write educational content for a lesson titled "${lesson.title}" in the module "${lesson.module_title}" of a course on "${course.subject}" (${course.difficulty} level).
+
+Write 250-400 words in markdown format with:
+- ## Main heading
+- Clear explanation of the concept
+- **Bold** key terms
+- Bullet points for key concepts
+- A practical example or code snippet if relevant
+- A summary tip at the end
+
+Return ONLY the markdown content, no JSON wrapper.`;
+
+          const content = await aiSvc.aiRequest(prompt, { maxTokens: 2048 });
+          if (content && content.length > 100) {
+            await pool.query(
+              'UPDATE course_lessons SET content_text = $1 WHERE id = $2',
+              [content, lesson.id]
+            );
+            updated++;
+          }
+        } catch (err) {
+          console.warn(`Content regen failed for lesson ${lesson.title}:`, err.message);
+        }
+      }
+    }
+
+    sendSuccess(res, { updated, total: lessons.length }, `Regenerated content for ${updated} lessons`);
+  } catch (e) { next(e); }
+});
+
 router.post('/:id/lessons/:lessonId/complete', authenticate, authorize('learner'), async (req, res, next) => {
   try { sendSuccess(res, await svc.completeLesson(req.params.lessonId, req.user.id), 'Lesson completed'); }
   catch (e) { next(e); }
