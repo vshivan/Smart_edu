@@ -175,11 +175,11 @@ Return ONLY valid JSON:
   "lessons": [
     {
       "title": "string (same as input)",
-      "content": "string (200-400 words of educational content in markdown: ## headings, **bold**, \\`code\\`, bullet points, code blocks with \\`\\`\\`)"
+      "content": "string (200-400 words, markdown format with ## headings, **bold**, inline code, bullet points, and fenced code blocks)"
     }
   ],
   "quiz": {
-    "title": "string (e.g. 'Module Quiz: ${mod.title}')",
+    "title": "string (e.g. Module Quiz: ${mod.title})",
     "questions": [
       {
         "question": "string",
