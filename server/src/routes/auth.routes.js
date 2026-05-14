@@ -94,8 +94,10 @@ router.get('/google/callback',
     try {
       const tokens = svc.generateTokens(req.user);
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      // Pass is_new flag so frontend can show role-selection for first-time Google users
+      const isNew = req.user.is_new ? '&is_new=true' : '';
       res.redirect(
-        `${frontendUrl}/auth/callback?token=${tokens.accessToken}&refresh=${tokens.refreshToken}`
+        `${frontendUrl}/auth/callback?token=${tokens.accessToken}&refresh=${tokens.refreshToken}${isNew}`
       );
     } catch (e) { next(e); }
   }
@@ -103,6 +105,35 @@ router.get('/google/callback',
 
 // Current user
 router.get('/me', authenticate, (req, res) => sendSuccess(res, req.user));
+
+// Update role — used after Google OAuth for new users to pick Learner/Tutor
+router.post('/set-role', authenticate, async (req, res, next) => {
+  try {
+    const { role } = req.body;
+    if (!['learner', 'tutor'].includes(role)) {
+      throw new (require('../utils/errors').AppError)('Role must be learner or tutor', 400);
+    }
+    const { pool } = require('../config/db');
+
+    // Update role
+    await pool.query('UPDATE users SET role = $1 WHERE id = $2', [role, req.user.id]);
+
+    // Create the appropriate profile if it doesn't exist
+    if (role === 'learner') {
+      await pool.query(
+        'INSERT INTO learner_profiles (user_id) VALUES ($1) ON CONFLICT DO NOTHING',
+        [req.user.id]
+      );
+    } else if (role === 'tutor') {
+      await pool.query(
+        'INSERT INTO tutor_profiles (user_id) VALUES ($1) ON CONFLICT DO NOTHING',
+        [req.user.id]
+      );
+    }
+
+    sendSuccess(res, { role }, 'Role updated');
+  } catch (e) { next(e); }
+});
 
 // Change password (authenticated — different from reset-password which uses a token)
 router.post('/change-password', authenticate, async (req, res, next) => {

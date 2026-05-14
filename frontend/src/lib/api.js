@@ -1,20 +1,25 @@
 import axios from 'axios';
 
+// ── Base URL resolution ───────────────────────────────────────────────────────
+// Dev (npm run dev):  Vite proxy rewrites /api → localhost:3001, so baseURL = /api
+// Docker (nginx):     nginx proxies /api/ → server:3001/, so baseURL = /api
+// Render + Vercel:    VITE_API_URL = https://smartedulear-server.onrender.com
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
 const api = axios.create({
-  // In dev: Vite proxies all backend routes directly (no /api prefix)
-  // In prod: VITE_API_URL points to the Render backend
-  baseURL: import.meta.env.VITE_API_URL || '',
+  baseURL: BASE_URL,
   timeout: 30000,
+  withCredentials: false,
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Attach token on startup
+// Attach stored token on startup (persisted from previous session)
 const stored = JSON.parse(localStorage.getItem('auth-storage') || '{}');
 if (stored?.state?.token) {
   api.defaults.headers.common['Authorization'] = `Bearer ${stored.state.token}`;
 }
 
-// Response interceptor — auto refresh on 401
+// ── Auto-refresh on 401 ───────────────────────────────────────────────────────
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
@@ -24,11 +29,10 @@ api.interceptors.response.use(
       try {
         const refresh = JSON.parse(localStorage.getItem('auth-storage') || '{}')?.state?.refreshToken;
         if (!refresh) throw new Error('No refresh token');
-        const { data } = await axios.post(`${api.defaults.baseURL}/auth/refresh`, { refreshToken: refresh });
+        const { data } = await axios.post(`${BASE_URL}/auth/refresh`, { refreshToken: refresh });
         const newToken = data.data.accessToken;
         api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
         original.headers['Authorization'] = `Bearer ${newToken}`;
-        // Update store
         const { useAuthStore } = await import('../store/authStore');
         useAuthStore.getState().setTokens(newToken, data.data.refreshToken);
         return api(original);

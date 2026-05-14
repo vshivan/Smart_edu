@@ -105,23 +105,26 @@ const findOrCreateGoogleUser = async (profile) => {
     [googleId, email]
   );
 
+  let isNew = false;
+
   if (!rows.length) {
+    isNew = true;
     const id = uuidv4();
     const result = await pool.query(
-      `INSERT INTO users (id, email, google_id, first_name, last_name, avatar_url, role, is_verified)
-       VALUES ($1,$2,$3,$4,$5,$6,'learner',true)
+      `INSERT INTO users (id, email, google_id, first_name, last_name, avatar_url, role, is_verified, is_active)
+       VALUES ($1,$2,$3,$4,$5,$6,'learner',true,true)
        RETURNING id, email, first_name, last_name, role`,
       [id, email, googleId, profile.name.givenName, profile.name.familyName, profile.photos?.[0]?.value]
     );
     rows = result.rows;
     await pool.query('INSERT INTO learner_profiles (user_id) VALUES ($1)', [id]);
-    // Welcome email for new Google sign-ups
     sendWelcomeEmail(email, profile.name.givenName).catch(() => {});
   } else if (!rows[0].google_id) {
     await pool.query('UPDATE users SET google_id = $1 WHERE id = $2', [googleId, rows[0].id]);
   }
 
-  return rows[0];
+  // Attach is_new flag so the callback route can tell the frontend
+  return { ...rows[0], is_new: isNew };
 };
 
 // ─── Token refresh ───────────────────────────────────────────────────────────

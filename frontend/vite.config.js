@@ -11,34 +11,34 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    // Split vendor chunks for better caching
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor:    ['react', 'react-dom', 'react-router-dom'],
-          ui:        ['framer-motion', 'lucide-react'],
-          query:     ['@tanstack/react-query'],
-          charts:    ['recharts'],
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          ui:     ['framer-motion', 'lucide-react'],
+          query:  ['@tanstack/react-query'],
+          charts: ['recharts'],
         },
       },
     },
   },
 
-  // ── Dev server (local only — Vercel/Render don't use this) ──────────────────
+  // ── Dev server proxy ─────────────────────────────────────────────────────────
+  // All API calls use /api prefix → proxy strips /api and forwards to backend
+  // This matches both Docker (nginx) and Render (VITE_API_URL) behaviour
   server: {
     port: 5173,
     proxy: {
-      '/auth':          { target: 'http://localhost:3000', changeOrigin: true },
-      '/courses':       { target: 'http://localhost:3000', changeOrigin: true },
-      '/ai':            { target: 'http://localhost:3000', changeOrigin: true },
-      '/quizzes':       { target: 'http://localhost:3000', changeOrigin: true },
-      '/gamification':  { target: 'http://localhost:3000', changeOrigin: true },
-      '/tutors':        { target: 'http://localhost:3000', changeOrigin: true },
-      '/payments':      { target: 'http://localhost:3000', changeOrigin: true },
-      '/notifications': { target: 'http://localhost:3000', changeOrigin: true },
-      '/admin':         { target: 'http://localhost:3000', changeOrigin: true },
-      '/health':        { target: 'http://localhost:3000', changeOrigin: true },
-      '/socket.io':     { target: 'http://localhost:3000', changeOrigin: true, ws: true },
+      '/api': {
+        target:      'http://localhost:3001',
+        changeOrigin: true,
+        rewrite:     (path) => path.replace(/^\/api/, ''),
+      },
+      '/socket.io': {
+        target:       'http://localhost:3001',
+        changeOrigin: true,
+        ws:           true,
+      },
     },
   },
 });
