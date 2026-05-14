@@ -73,7 +73,7 @@ const aiRequest = async (prompt, options = {}) => {
 
   // Fall back to Gemini
   try {
-    const result = await aiRequest(prompt, options);
+    const result = await geminiRequest(prompt, options);
     if (result) return result;
   } catch (err) {
     console.warn('Gemini failed:', err.message);
@@ -107,12 +107,19 @@ const appendMessages = async (sessionId, newMessages) => {
   );
 };
 
-// ─── Course generation ────────────────────────────────────────────────────────
+// ─── Course generation (Full content + module quizzes) ───────────────────────
+/**
+ * 2-step generation:
+ *  Step 1 — Course structure (modules + lesson titles)
+ *  Step 2 — Full lesson content (GeeksForGeeks style) + 5-question quiz per module
+ *           Runs in parallel across all modules for speed
+ */
 const generateCourse = async ({ subject, topics = [], difficulty = 'beginner', estimated_hours = 10, audience = 'general learners' }) => {
-  const prompt = `You are an expert curriculum designer. Generate a structured course outline as valid JSON only.
+  // ── Step 1: Course structure ──────────────────────────────────────────────
+  const structurePrompt = `You are an expert curriculum designer. Generate a structured course outline as valid JSON only.
 
 Subject: ${subject}
-Topics: ${topics.join(', ') || 'General overview'}
+Topics: ${topics.join(', ') || 'Core fundamentals'}
 Difficulty: ${difficulty}
 Estimated Hours: ${estimated_hours}
 Audience: ${audience}
@@ -120,40 +127,109 @@ Audience: ${audience}
 Return ONLY valid JSON (no markdown, no explanation):
 {
   "title": "string",
-  "description": "string",
-  "learning_outcomes": ["string"],
+  "description": "string (2-3 engaging sentences)",
+  "learning_outcomes": ["string (5-6 outcomes)"],
   "prerequisites": ["string"],
   "modules": [
     {
       "title": "string",
-      "description": "string",
+      "description": "string (1-2 sentences)",
       "lessons": [
-        { "title": "string", "content_type": "text", "estimated_minutes": 10, "xp_reward": 10, "key_concepts": ["string"] }
+        { "title": "string", "content_type": "text", "estimated_minutes": 15, "xp_reward": 20 }
       ]
     }
   ],
   "tags": ["string"]
 }
 
-Rules: 4-6 modules, 3-5 lessons each.`;
+Rules: 3-5 modules, 3-5 lessons each. Lesson titles must be specific and descriptive.`;
 
-  const raw = await aiRequest(prompt, { jsonMode: true, maxTokens: 4096 });
+  const structureRaw = await aiRequest(structurePrompt, { jsonMode: true, maxTokens: 4096 });
 
-  // Extract JSON from response
-  let parsed;
+  let structure;
   try {
-    parsed = JSON.parse(raw);
+    structure = JSON.parse(structureRaw);
   } catch {
-    const match = raw.match(/\{[\s\S]*\}/);
-    if (match) {
-      try { parsed = JSON.parse(match[0]); } catch {}
-    }
+    const match = structureRaw.match(/\{[\s\S]*\}/);
+    if (match) try { structure = JSON.parse(match[0]); } catch {}
   }
 
-  if (!parsed?.title || !parsed?.modules) {
-    throw new AppError('AI returned invalid response. Please try again.', 500);
+  if (!structure?.title || !structure?.modules) {
+    throw new AppError('AI returned invalid course structure. Please try again.', 500);
   }
-  return parsed;
+
+  // ── Step 2: Full content + quiz per module (parallel) ─────────────────────
+  const modulesWithContent = await Promise.all(
+    structure.modules.map(async (mod) => {
+      const lessonList = mod.lessons.map((l, i) => `${i + 1}. ${l.title}`).join('\n');
+
+      const contentPrompt = `You are writing educational content for a course on "${subject}".
+Module: "${mod.title}" | Difficulty: ${difficulty}
+Style: GeeksForGeeks — clear, structured, with examples and code where relevant.
+
+Lessons in this module:
+${lessonList}
+
+Return ONLY valid JSON:
+{
+  "lessons": [
+    {
+      "title": "string (same as input)",
+      "content": "string (200-400 words of educational content in markdown: ## headings, **bold**, \\`code\\`, bullet points, code blocks with \\`\\`\\`)"
+    }
+  ],
+  "quiz": {
+    "title": "string (e.g. 'Module Quiz: ${mod.title}')",
+    "questions": [
+      {
+        "question": "string",
+        "options": ["A) ...", "B) ...", "C) ...", "D) ..."],
+        "correct_answer": "A",
+        "explanation": "string (2-3 sentences explaining why)",
+        "points": 10
+      }
+    ]
+  }
+}
+
+Rules:
+- Generate content for ALL ${mod.lessons.length} lessons
+- Quiz must have EXACTLY 5 questions testing module content
+- Use real code examples where applicable
+- Explanations must be educational`;
+
+      const contentRaw = await aiRequest(contentPrompt, { jsonMode: true, maxTokens: 8192 });
+
+      let contentData;
+      try {
+        contentData = JSON.parse(contentRaw);
+      } catch {
+        const match = contentRaw?.match(/\{[\s\S]*\}/);
+        if (match) try { contentData = JSON.parse(match[0]); } catch {}
+      }
+
+      // Merge structure lessons with generated content
+      const enrichedLessons = mod.lessons.map((lesson, i) => ({
+        ...lesson,
+        content: contentData?.lessons?.[i]?.content
+          || `## ${lesson.title}\n\nContent for this lesson is being generated. Please try regenerating the course.`,
+      }));
+
+      return {
+        ...mod,
+        lessons: enrichedLessons,
+        quiz: contentData?.quiz || {
+          title: `Module Quiz: ${mod.title}`,
+          questions: [],
+        },
+      };
+    })
+  );
+
+  return {
+    ...structure,
+    modules: modulesWithContent,
+  };
 };
 
 // ─── Quiz generation ──────────────────────────────────────────────────────────
