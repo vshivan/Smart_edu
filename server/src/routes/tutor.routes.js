@@ -15,6 +15,18 @@ router.put('/availability', authenticate, authorize('tutor'), async (req, res, n
   catch (e) { next(e); }
 });
 
+// Self-profile for logged-in tutor (availability, stats)
+router.get('/me', authenticate, authorize('tutor'), async (req, res, next) => {
+  try {
+    const { pool } = require('../config/db');
+    const { rows } = await pool.query(
+      'SELECT id, is_available, hourly_rate, rating, total_sessions FROM tutor_profiles WHERE user_id = $1',
+      [req.user.id]
+    );
+    sendSuccess(res, rows[0] || null);
+  } catch (e) { next(e); }
+});
+
 router.post('/slots', authenticate, authorize('tutor'), async (req, res, next) => {
   try { sendCreated(res, await svc.addSlots(req.user.id, req.body.slots)); }
   catch (e) { next(e); }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,35 +9,25 @@ import toast from 'react-hot-toast';
 export default function QuizPage() {
   const { quizId } = useParams();
   const navigate = useNavigate();
-  const [answers, setAnswers] = useState({});
+  const [answers,   setAnswers]   = useState({});
   const [submitted, setSubmitted] = useState(false);
-  const [result, setResult] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(null);
-  const [current, setCurrent] = useState(0);
+  const [result,    setResult]    = useState(null);
+  const [timeLeft,  setTimeLeft]  = useState(null);
+  const [current,   setCurrent]   = useState(0);
 
   const { data: quiz, isLoading } = useQuery({
     queryKey: ['quiz', quizId],
     queryFn: () => api.get(`/quizzes/${quizId}`).then(r => r.data.data),
   });
 
-  useEffect(() => {
-    if (quiz?.time_limit_s) {
-      setTimeLeft(quiz.time_limit_s);
-      const t = setInterval(() => setTimeLeft(s => {
-        if (s <= 1) { clearInterval(t); handleSubmit(); return 0; }
-        return s - 1;
-      }), 1000);
-      return () => clearInterval(t);
-    }
-  }, [quiz]);
-
-  const handleSubmit = async () => {
+  // FIX: defined with useCallback BEFORE useEffect so the timer closure captures it correctly
+  const handleSubmit = useCallback(async () => {
     if (submitted) return;
     setSubmitted(true);
     const payload = Object.entries(answers).map(([question_id, answer]) => ({ question_id, answer }));
     try {
       const { data } = await api.post(`/quizzes/${quizId}/attempt`, {
-        answers: payload,
+        answers:      payload,
         time_taken_s: quiz?.time_limit_s ? quiz.time_limit_s - (timeLeft || 0) : 0,
       });
       setResult(data.data);
@@ -45,7 +35,20 @@ export default function QuizPage() {
       toast.error(err.response?.data?.message || 'Submission failed');
       setSubmitted(false);
     }
-  };
+  }, [submitted, answers, quizId, quiz, timeLeft]);
+
+  // FIX: handleSubmit is now defined above, safe to reference in useEffect
+  useEffect(() => {
+    if (!quiz?.time_limit_s) return;
+    setTimeLeft(quiz.time_limit_s);
+    const t = setInterval(() => {
+      setTimeLeft(s => {
+        if (s <= 1) { clearInterval(t); handleSubmit(); return 0; }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, [quiz]); // intentionally only re-run when quiz loads, not on every handleSubmit change
 
   if (isLoading) return (
     <div className="flex items-center justify-center h-64">
@@ -55,8 +58,21 @@ export default function QuizPage() {
   if (!quiz) return <div className="text-center text-text-muted py-20">Quiz not found</div>;
 
   const questions = quiz.questions || [];
-  const q = questions[current];
-  const progress = ((current + 1) / questions.length) * 100;
+  const q         = questions[current];
+  const progress  = ((current + 1) / questions.length) * 100;
+
+  // FIX: options can be either an array ["A) ...", "B) ..."] or object {A: "...", B: "..."}
+  // Normalize to [{key, label}] format
+  const getOptions = (options) => {
+    if (!options) return [];
+    if (Array.isArray(options)) {
+      return options.map((opt, i) => {
+        const letter = String.fromCharCode(65 + i); // A, B, C, D
+        return { key: letter, label: opt };
+      });
+    }
+    return Object.entries(options).map(([key, label]) => ({ key, label }));
+  };
 
   if (result) {
     return (
@@ -91,6 +107,8 @@ export default function QuizPage() {
     );
   }
 
+  const options = getOptions(q?.options);
+
   return (
     <div className="max-w-2xl mx-auto space-y-5 animate-slide-up">
       <div className="flex items-center justify-between">
@@ -121,7 +139,7 @@ export default function QuizPage() {
         >
           <p className="font-semibold text-text-primary text-base mb-5">{q?.question_text}</p>
           <div className="space-y-2.5">
-            {q?.options && Object.entries(q.options).map(([key, val]) => (
+            {options.map(({ key, label }) => (
               <button
                 key={key}
                 onClick={() => setAnswers(a => ({ ...a, [q.id]: key }))}
@@ -131,7 +149,7 @@ export default function QuizPage() {
                     : 'bg-white border-surface-border text-text-secondary hover:border-slate-300 hover:bg-surface-hover'
                 }`}
               >
-                <span className="font-bold text-brand-600 mr-3">{key}.</span>{val}
+                <span className="font-bold text-brand-600 mr-3">{key}.</span>{label}
               </button>
             ))}
           </div>

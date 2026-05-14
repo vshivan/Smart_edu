@@ -112,17 +112,38 @@ const getLeaderboard = async (limit = 20) => {
   const r = await getRedis();
   const entries = await r.zRangeWithScores('leaderboard:global', 0, limit - 1, { REV: true });
 
+  // Always enrich with user data from DB — Redis only stores user_id + score
   if (!entries.length) {
     const { rows } = await pool.query(
-      `SELECT u.id, u.first_name, u.last_name, u.avatar_url, lp.xp_total, lp.level
+      `SELECT u.id AS user_id, u.first_name, u.last_name, u.avatar_url,
+              lp.xp_total AS xp, lp.level
        FROM learner_profiles lp JOIN users u ON lp.user_id = u.id
        ORDER BY lp.xp_total DESC LIMIT $1`,
       [limit]
     );
-    return rows;
+    return rows.map((r, i) => ({ ...r, rank: i + 1 }));
   }
 
-  return entries.map((e, i) => ({ rank: i + 1, user_id: e.value, xp: e.score }));
+  // Enrich Redis entries with user names and levels from DB
+  const userIds = entries.map(e => e.value);
+  const { rows: users } = await pool.query(
+    `SELECT u.id, u.first_name, u.last_name, u.avatar_url, lp.level
+     FROM users u
+     LEFT JOIN learner_profiles lp ON lp.user_id = u.id
+     WHERE u.id = ANY($1::uuid[])`,
+    [userIds]
+  );
+  const userMap = Object.fromEntries(users.map(u => [u.id, u]));
+
+  return entries.map((e, i) => ({
+    rank:       i + 1,
+    user_id:    e.value,
+    xp:         e.score,
+    first_name: userMap[e.value]?.first_name || null,
+    last_name:  userMap[e.value]?.last_name  || null,
+    avatar_url: userMap[e.value]?.avatar_url || null,
+    level:      userMap[e.value]?.level      || 1,
+  }));
 };
 
 const getGamificationProfile = async (userId) => {

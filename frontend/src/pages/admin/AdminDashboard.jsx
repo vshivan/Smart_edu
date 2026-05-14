@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Users, BookOpen, DollarSign, UserCheck, TrendingUp } from 'lucide-react';
+import { Users, BookOpen, IndianRupee, UserCheck } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import api from '../../lib/api';
 
@@ -44,9 +44,9 @@ export default function AdminDashboard() {
     </div>
   );
 
-  const u = data?.users    || {};
-  const c = data?.courses  || {};
-  const r = data?.revenue  || {};
+  const u = data?.users      || {};
+  const c = data?.courses    || {};
+  const r = data?.revenue    || {};
   const e = data?.engagement || {};
 
   return (
@@ -57,10 +57,11 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard icon={Users}      label="Total Users"       value={parseInt(u.total || 0).toLocaleString()}      sub={`+${u.new_30d || 0} this month`}      iconBg="bg-blue-50"    iconColor="text-blue-600"   delay={0} />
-        <MetricCard icon={UserCheck}  label="Active (7d)"       value={parseInt(u.active_7d || 0).toLocaleString()}  sub={`${u.tutors || 0} tutors`}             iconBg="bg-emerald-50" iconColor="text-emerald-600" delay={0.05} />
-        <MetricCard icon={BookOpen}   label="Total Courses"     value={parseInt(c.total || 0).toLocaleString()}      sub={`${c.ai_generated || 0} AI-generated`} iconBg="bg-violet-50"  iconColor="text-violet-600" delay={0.1} />
-        <MetricCard icon={DollarSign} label="Platform Revenue"  value={`$${parseFloat(r.platform_earnings || 0).toFixed(0)}`} sub="All time"                    iconBg="bg-amber-50"   iconColor="text-amber-600"  delay={0.15} />
+        <MetricCard icon={Users}        label="Total Users"      value={parseInt(u.total || 0).toLocaleString()}     sub={`+${u.new_30d || 0} this month`}      iconBg="bg-blue-50"    iconColor="text-blue-600"    delay={0}    />
+        <MetricCard icon={UserCheck}    label="Active (7d)"      value={parseInt(u.active_7d || 0).toLocaleString()} sub={`${u.tutors || 0} tutors`}             iconBg="bg-emerald-50" iconColor="text-emerald-600" delay={0.05} />
+        <MetricCard icon={BookOpen}     label="Total Courses"    value={parseInt(c.total || 0).toLocaleString()}     sub={`${c.ai_generated || 0} AI-generated`} iconBg="bg-violet-50"  iconColor="text-violet-600" delay={0.1}  />
+        {/* FIX: was showing bare number with no currency — now ₹ */}
+        <MetricCard icon={IndianRupee}  label="Platform Revenue" value={`₹${parseFloat(r.platform_earnings || 0).toFixed(0)}`} sub="All time"               iconBg="bg-amber-50"   iconColor="text-amber-600"  delay={0.15} />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-5">
@@ -100,7 +101,7 @@ export default function AdminDashboard() {
           { label: 'Avg Completion',    value: `${parseFloat(e.avg_completion || 0).toFixed(1)}%` },
           { label: 'Total Enrollments', value: parseInt(e.total_enrollments || 0).toLocaleString() },
           { label: 'Avg Quiz Score',    value: `${parseFloat(analytics?.quiz_stats?.avg_score || 0).toFixed(1)}%` },
-          { label: 'Revenue (30d)',     value: `$${parseFloat(r.revenue_30d || 0).toFixed(0)}` },
+          { label: 'Revenue (30d)',     value: `₹${parseFloat(r.revenue_30d || 0).toFixed(0)}` },
         ].map(({ label, value }) => (
           <div key={label} className="card text-center py-5">
             <p className="text-2xl font-bold text-text-primary">{value}</p>

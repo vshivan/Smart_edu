@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { DollarSign, BookOpen, Calendar, ToggleLeft, ToggleRight, TrendingUp } from 'lucide-react';
+import { BookOpen, Calendar, ToggleLeft, ToggleRight, TrendingUp, IndianRupee } from 'lucide-react';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
 
@@ -19,6 +19,7 @@ const StatCard = ({ label, value, sub, icon: Icon, color, bg }) => (
 
 export default function TutorDashboard() {
   const qc = useQueryClient();
+  // FIX: was hardcoded false — now syncs with actual tutor profile availability
   const [available, setAvailable] = useState(false);
 
   const { data: earnings } = useQuery({
@@ -26,13 +27,30 @@ export default function TutorDashboard() {
     queryFn: () => api.get('/tutors/earnings').then(r => r.data.data),
   });
 
+  // Read current availability from the tutor's own profile
+  const { data: tutorProfile } = useQuery({
+    queryKey: ['tutor-profile-self'],
+    queryFn: async () => {
+      try { return await api.get('/tutors/me').then(r => r.data.data); }
+      catch { return null; }
+    },
+  });
+
+  useEffect(() => {
+    if (tutorProfile?.is_available !== undefined) {
+      setAvailable(tutorProfile.is_available);
+    }
+  }, [tutorProfile]);
+
   const toggleMutation = useMutation({
     mutationFn: (is_available) => api.put('/tutors/availability', { is_available }),
     onSuccess: (_, is_available) => {
       setAvailable(is_available);
       toast.success(is_available ? 'You are now available for bookings' : 'You are now unavailable');
       qc.invalidateQueries(['tutor-earnings']);
+      qc.invalidateQueries(['tutor-profile-self']);
     },
+    onError: () => toast.error('Failed to update availability'),
   });
 
   const sessions = earnings?.recent_sessions || [];
@@ -44,6 +62,7 @@ export default function TutorDashboard() {
           <h1 className="page-title">Tutor Dashboard</h1>
           <p className="page-subtitle">Manage your sessions and earnings</p>
         </div>
+
         {/* Availability toggle */}
         <button
           onClick={() => toggleMutation.mutate(!available)}
@@ -54,16 +73,45 @@ export default function TutorDashboard() {
               : 'bg-white border-surface-border text-text-secondary hover:border-slate-300'
           }`}
         >
-          {available ? <ToggleRight size={20} className="text-emerald-600" /> : <ToggleLeft size={20} />}
+          {available
+            ? <ToggleRight size={20} className="text-emerald-600" />
+            : <ToggleLeft size={20} />
+          }
           {available ? 'Available' : 'Unavailable'}
         </button>
       </div>
 
+      {/* FIX: was using $ (USD) — now uses ₹ (INR) via IndianRupee icon */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Earnings"  value={`$${parseFloat(earnings?.total_earnings || 0).toFixed(2)}`}  icon={DollarSign}  color="text-emerald-600" bg="bg-emerald-50" />
-        <StatCard label="This Month"      value={`$${parseFloat(earnings?.earnings_30d || 0).toFixed(2)}`}    icon={TrendingUp}  color="text-brand-600"   bg="bg-brand-50"   sub="Last 30 days" />
-        <StatCard label="Total Sessions"  value={earnings?.total_sessions || 0}                               icon={Calendar}    color="text-violet-600"  bg="bg-violet-50" />
-        <StatCard label="Completed"       value={earnings?.completed_sessions || 0}                           icon={BookOpen}    color="text-amber-600"   bg="bg-amber-50" />
+        <StatCard
+          label="Total Earnings"
+          value={`₹${parseFloat(earnings?.total_earnings || 0).toFixed(2)}`}
+          icon={IndianRupee}
+          color="text-emerald-600"
+          bg="bg-emerald-50"
+        />
+        <StatCard
+          label="This Month"
+          value={`₹${parseFloat(earnings?.earnings_30d || 0).toFixed(2)}`}
+          icon={TrendingUp}
+          color="text-brand-600"
+          bg="bg-brand-50"
+          sub="Last 30 days"
+        />
+        <StatCard
+          label="Total Sessions"
+          value={earnings?.total_sessions || 0}
+          icon={Calendar}
+          color="text-violet-600"
+          bg="bg-violet-50"
+        />
+        <StatCard
+          label="Completed"
+          value={earnings?.completed_sessions || 0}
+          icon={BookOpen}
+          color="text-amber-600"
+          bg="bg-amber-50"
+        />
       </div>
 
       {/* Recent sessions */}
@@ -72,7 +120,9 @@ export default function TutorDashboard() {
         {sessions.length === 0 ? (
           <div className="text-center py-10 border border-dashed border-surface-border rounded-xl">
             <Calendar size={32} className="text-text-muted mx-auto mb-3" />
-            <p className="text-text-muted text-sm">No sessions yet. Toggle availability to start accepting bookings.</p>
+            <p className="text-text-muted text-sm">
+              No sessions yet. Toggle availability to start accepting bookings.
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -84,11 +134,14 @@ export default function TutorDashboard() {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className={`badge text-xs ${
-                    s.status === 'completed' ? 'badge-green' :
-                    s.status === 'confirmed' ? 'badge-brand' :
-                    s.status === 'cancelled' ? 'badge-red' : 'badge-yellow'
+                    s.status === 'completed' ? 'badge-green'  :
+                    s.status === 'confirmed' ? 'badge-brand'  :
+                    s.status === 'cancelled' ? 'badge-red'    : 'badge-yellow'
                   }`}>{s.status}</span>
-                  <span className="font-semibold text-text-primary text-sm">${parseFloat(s.tutor_earnings || 0).toFixed(2)}</span>
+                  {/* FIX: was $ — now ₹ */}
+                  <span className="font-semibold text-text-primary text-sm">
+                    ₹{parseFloat(s.tutor_earnings || 0).toFixed(2)}
+                  </span>
                 </div>
               </div>
             ))}

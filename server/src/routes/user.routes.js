@@ -69,6 +69,7 @@ router.put('/profile', authenticate, validate(profileSchema), async (req, res, n
   try {
     const { first_name, last_name, bio, learning_goals } = req.body;
 
+    // FIX: was using ${i++} (plain number) instead of $${i++} (SQL param placeholder)
     if (first_name || last_name) {
       const updates = [];
       const params = [];

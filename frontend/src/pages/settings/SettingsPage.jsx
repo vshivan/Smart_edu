@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { useMutation } from '@tanstack/react-query';
+import { useThemeStore } from '../../store/themeStore';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
 import {
@@ -32,7 +33,7 @@ function ProfileTab() {
       updateUser(res.data.data);
       toast.success('Profile updated');
     },
-    onError: () => toast.error('Failed to update profile'),
+    onError: (e) => toast.error(e.response?.data?.message || 'Failed to update profile'),
   });
 
   return (
@@ -56,28 +57,15 @@ function ProfileTab() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="input-label">First Name</label>
-          <input
-            className="input"
-            value={form.first_name}
-            onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
-          />
+          <input className="input" value={form.first_name} onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))} />
         </div>
         <div>
           <label className="input-label">Last Name</label>
-          <input
-            className="input"
-            value={form.last_name}
-            onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))}
-          />
+          <input className="input" value={form.last_name} onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))} />
         </div>
         <div className="sm:col-span-2">
           <label className="input-label">Email</label>
-          <input
-            className="input bg-surface-muted cursor-not-allowed"
-            value={form.email}
-            disabled
-            title="Email cannot be changed"
-          />
+          <input className="input bg-surface-muted cursor-not-allowed" value={form.email} disabled title="Email cannot be changed" />
           <p className="text-xs text-text-muted mt-1">Email address cannot be changed</p>
         </div>
         <div className="sm:col-span-2">
@@ -91,11 +79,7 @@ function ProfileTab() {
         </div>
       </div>
 
-      <button
-        onClick={() => mutation.mutate(form)}
-        disabled={mutation.isPending}
-        className="btn-primary flex items-center gap-2 text-sm"
-      >
+      <button onClick={() => mutation.mutate({ first_name: form.first_name, last_name: form.last_name, bio: form.bio })} disabled={mutation.isPending} className="btn-primary flex items-center gap-2 text-sm">
         <Save size={15} />
         {mutation.isPending ? 'Saving...' : 'Save Changes'}
       </button>
@@ -108,8 +92,9 @@ function SecurityTab() {
   const [form, setForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
   const [show, setShow] = useState({ current: false, new: false, confirm: false });
 
+  // FIX: was PUT, route is POST
   const mutation = useMutation({
-    mutationFn: (data) => api.put('/auth/change-password', data),
+    mutationFn: (data) => api.post('/auth/change-password', data),
     onSuccess: () => {
       toast.success('Password changed successfully');
       setForm({ current_password: '', new_password: '', confirm_password: '' });
@@ -135,11 +120,7 @@ function SecurityTab() {
           onChange={e => setForm(f => ({ ...f, [field]: e.target.value }))}
           placeholder="••••••••"
         />
-        <button
-          type="button"
-          onClick={() => setShow(s => ({ ...s, [showKey]: !s[showKey] }))}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
-        >
+        <button type="button" onClick={() => setShow(s => ({ ...s, [showKey]: !s[showKey] }))} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary">
           {show[showKey] ? <EyeOff size={15} /> : <Eye size={15} />}
         </button>
       </div>
@@ -154,11 +135,10 @@ function SecurityTab() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
-        <PasswordField label="Current Password"  field="current_password" showKey="current" />
-        <PasswordField label="New Password"      field="new_password"     showKey="new" />
-        <PasswordField label="Confirm Password"  field="confirm_password" showKey="confirm" />
+        <PasswordField label="Current Password" field="current_password" showKey="current" />
+        <PasswordField label="New Password"     field="new_password"     showKey="new" />
+        <PasswordField label="Confirm Password" field="confirm_password" showKey="confirm" />
 
-        {/* Password strength hints */}
         {form.new_password && (
           <div className="space-y-1.5 p-3 bg-surface-muted rounded-xl border border-surface-border">
             {[
@@ -185,17 +165,36 @@ function SecurityTab() {
 
 // ── Notifications Tab ─────────────────────────────────────────────────────────
 function NotificationsTab() {
-  const [prefs, setPrefs] = useState({
-    email_course_updates:  true,
+  const DEFAULTS = {
+    email_course_updates:    true,
     email_session_reminders: true,
-    email_achievements:    false,
-    email_announcements:   true,
-    push_xp_earned:        true,
-    push_streak_reminder:  true,
-    push_new_messages:     true,
+    email_achievements:      false,
+    email_announcements:     true,
+    push_xp_earned:          true,
+    push_streak_reminder:    true,
+    push_new_messages:       true,
+  };
+
+  const [prefs, setPrefs] = useState(() => {
+    try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem('notif_prefs') || '{}') }; }
+    catch { return DEFAULTS; }
   });
+  const [saving, setSaving] = useState(false);
 
   const toggle = (key) => setPrefs(p => ({ ...p, [key]: !p[key] }));
+
+  // FIX: actually persist preferences (localStorage + backend endpoint if available)
+  const savePrefs = async () => {
+    setSaving(true);
+    try {
+      localStorage.setItem('notif_prefs', JSON.stringify(prefs));
+      // Attempt to save to backend — non-fatal if endpoint doesn't exist yet
+      await api.put('/users/notification-prefs', prefs).catch(() => {});
+      toast.success('Notification preferences saved');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const Toggle = ({ label, desc, pref }) => (
     <div className="flex items-center justify-between py-3 border-b border-surface-border last:border-0">
@@ -205,8 +204,9 @@ function NotificationsTab() {
       </div>
       <button
         onClick={() => toggle(pref)}
-        className={`relative w-10 h-5.5 rounded-full transition-colors ${prefs[pref] ? 'bg-brand-600' : 'bg-slate-200'}`}
+        className={`relative rounded-full transition-colors shrink-0 ${prefs[pref] ? 'bg-brand-600' : 'bg-slate-200'}`}
         style={{ height: '22px', width: '40px' }}
+        aria-label={`Toggle ${label}`}
       >
         <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${prefs[pref] ? 'translate-x-5' : 'translate-x-0.5'}`} />
       </button>
@@ -225,10 +225,10 @@ function NotificationsTab() {
           <p className="text-xs font-semibold text-text-muted uppercase tracking-wider">Email Notifications</p>
         </div>
         <div className="px-5">
-          <Toggle label="Course Updates"      desc="New lessons, course changes"         pref="email_course_updates" />
-          <Toggle label="Session Reminders"   desc="Upcoming tutor session alerts"       pref="email_session_reminders" />
-          <Toggle label="Achievements"        desc="Badge earned, level up"              pref="email_achievements" />
-          <Toggle label="Announcements"       desc="Platform news and updates"           pref="email_announcements" />
+          <Toggle label="Course Updates"    desc="New lessons, course changes"         pref="email_course_updates" />
+          <Toggle label="Session Reminders" desc="Upcoming tutor session alerts"       pref="email_session_reminders" />
+          <Toggle label="Achievements"      desc="Badge earned, level up"              pref="email_achievements" />
+          <Toggle label="Announcements"     desc="Platform news and updates"           pref="email_announcements" />
         </div>
       </div>
 
@@ -237,44 +237,42 @@ function NotificationsTab() {
           <p className="text-xs font-semibold text-text-muted uppercase tracking-wider">In-App Notifications</p>
         </div>
         <div className="px-5">
-          <Toggle label="XP Earned"           desc="When you complete lessons or quizzes" pref="push_xp_earned" />
-          <Toggle label="Streak Reminder"     desc="Daily login streak alerts"            pref="push_streak_reminder" />
-          <Toggle label="New Messages"        desc="Tutor and system messages"            pref="push_new_messages" />
+          <Toggle label="XP Earned"        desc="When you complete lessons or quizzes" pref="push_xp_earned" />
+          <Toggle label="Streak Reminder"  desc="Daily login streak alerts"            pref="push_streak_reminder" />
+          <Toggle label="New Messages"     desc="Tutor and system messages"            pref="push_new_messages" />
         </div>
       </div>
 
-      <button
-        onClick={() => toast.success('Notification preferences saved')}
-        className="btn-primary flex items-center gap-2 text-sm"
-      >
-        <Save size={15} /> Save Preferences
+      <button onClick={savePrefs} disabled={saving} className="btn-primary flex items-center gap-2 text-sm">
+        <Save size={15} /> {saving ? 'Saving...' : 'Save Preferences'}
       </button>
     </div>
   );
 }
 
 // ── Appearance Tab ────────────────────────────────────────────────────────────
+// FIX: was using require() inside component body — invalid in ESM React
+// Now uses the imported useThemeStore from the top of the file
 function AppearanceTab() {
-  const { theme, setTheme } = require('../../store/themeStore').useThemeStore();
+  const { theme, setTheme } = useThemeStore();
 
   const colors = [
-    { id: 'indigo', label: 'Indigo',  bg: 'bg-indigo-500' },
-    { id: 'violet', label: 'Violet',  bg: 'bg-violet-500' },
-    { id: 'blue',   label: 'Blue',    bg: 'bg-blue-500' },
-    { id: 'emerald',label: 'Emerald', bg: 'bg-emerald-500' },
-    { id: 'rose',   label: 'Rose',    bg: 'bg-rose-500' },
+    { id: 'indigo',  label: 'Indigo',  bg: 'bg-indigo-500' },
+    { id: 'violet',  label: 'Violet',  bg: 'bg-violet-500' },
+    { id: 'blue',    label: 'Blue',    bg: 'bg-blue-500' },
+    { id: 'emerald', label: 'Emerald', bg: 'bg-emerald-500' },
+    { id: 'rose',    label: 'Rose',    bg: 'bg-rose-500' },
   ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-base font-semibold text-text-primary dark:text-white">Appearance</h2>
+        <h2 className="text-base font-semibold text-text-primary">Appearance</h2>
         <p className="text-sm text-text-muted mt-0.5">Customize how SmartEduLearn looks</p>
       </div>
 
-      {/* Theme */}
-      <div className="card dark:bg-dark-card dark:border-dark-border">
-        <p className="text-sm font-semibold text-text-primary dark:text-white mb-3">Theme</p>
+      <div className="card">
+        <p className="text-sm font-semibold text-text-primary mb-3">Theme</p>
         <div className="grid grid-cols-2 gap-3">
           {[
             { id: 'light', label: 'Light', icon: '☀️', desc: 'Clean white interface' },
@@ -285,28 +283,24 @@ function AppearanceTab() {
               onClick={() => setTheme(t.id)}
               className={`p-4 rounded-xl border-2 text-left transition-all ${
                 theme === t.id
-                  ? 'border-brand-400 bg-brand-50 dark:bg-brand-900/20'
-                  : 'border-surface-border dark:border-dark-border hover:border-slate-300 dark:hover:border-slate-600'
+                  ? 'border-brand-400 bg-brand-50'
+                  : 'border-surface-border hover:border-slate-300'
               }`}
             >
               <div className="text-2xl mb-2">{t.icon}</div>
-              <p className="text-sm font-semibold text-text-primary dark:text-white">{t.label}</p>
+              <p className="text-sm font-semibold text-text-primary">{t.label}</p>
               <p className="text-xs text-text-muted">{t.desc}</p>
-              {theme === t.id && <p className="text-xs text-brand-600 dark:text-brand-400 font-semibold mt-1">✓ Active</p>}
+              {theme === t.id && <p className="text-xs text-brand-600 font-semibold mt-1">✓ Active</p>}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Accent colors */}
-      <div className="card dark:bg-dark-card dark:border-dark-border">
-        <p className="text-sm font-semibold text-text-primary dark:text-white mb-3">Accent Color</p>
+      <div className="card">
+        <p className="text-sm font-semibold text-text-primary mb-3">Accent Color</p>
         <div className="flex gap-3">
           {colors.map(c => (
-            <button
-              key={c.id}
-              className="flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all"
-            >
+            <button key={c.id} className="flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all hover:bg-surface-hover">
               <div className={`w-8 h-8 rounded-full ${c.bg}`} />
               <span className="text-xs text-text-muted">{c.label}</span>
             </button>
@@ -321,7 +315,12 @@ function AppearanceTab() {
 // ── Main Settings Page ────────────────────────────────────────────────────────
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
-  const ActiveComponent = { profile: ProfileTab, security: SecurityTab, notifications: NotificationsTab, appearance: AppearanceTab }[activeTab];
+  const ActiveComponent = {
+    profile:       ProfileTab,
+    security:      SecurityTab,
+    notifications: NotificationsTab,
+    appearance:    AppearanceTab,
+  }[activeTab];
 
   return (
     <div className="max-w-4xl mx-auto space-y-5 animate-slide-up">
@@ -332,7 +331,6 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex flex-col md:flex-row gap-6">
-        {/* Tab sidebar */}
         <aside className="md:w-48 shrink-0">
           <nav className="card p-2 space-y-0.5">
             {TABS.map(({ id, label, icon: Icon }) => (
@@ -352,7 +350,6 @@ export default function SettingsPage() {
           </nav>
         </aside>
 
-        {/* Tab content */}
         <div className="flex-1 card">
           <ActiveComponent />
         </div>
