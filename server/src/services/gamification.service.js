@@ -1,14 +1,23 @@
 const { pool } = require('../config/db');
-const { createClient } = require('redis');
 const { AppError } = require('../utils/errors');
 const { LEVELS, XP } = require('../constants');
+const { getRedis } = require('../config/redis');
 
-let redis;
-const getRedis = async () => {
-  if (!redis) { redis = createClient({ url: process.env.REDIS_URL }); await redis.connect(); }
-  return redis;
+// ─── Redis helpers — graceful fallback if Redis is unavailable ────────────────
+const redisZAdd = async (key, items) => {
+  try { const r = await getRedis(); await r.zAdd(key, items); } catch {}
+};
+const redisZRangeWithScores = async (key, start, stop, opts) => {
+  try { const r = await getRedis(); return await r.zRangeWithScores(key, start, stop, opts); } catch { return []; }
+};
+const redisSetEx = async (key, ttl, value) => {
+  try { const r = await getRedis(); await r.setEx(key, ttl, value); } catch {}
+};
+const redisGet = async (key) => {
+  try { const r = await getRedis(); return await r.get(key); } catch { return null; }
 };
 
+// ─── Level helpers ────────────────────────────────────────────────────────────
 const getLevelForXP = (xp) => {
   let current = LEVELS[0];
   for (const lvl of LEVELS) {
@@ -18,6 +27,7 @@ const getLevelForXP = (xp) => {
   return current;
 };
 
+// ─── Award XP ─────────────────────────────────────────────────────────────────
 const awardXP = async (userId, amount, reason) => {
   const { rows } = await pool.query(
     `UPDATE learner_profiles SET xp_total = xp_total + $1 WHERE user_id = $2
@@ -35,8 +45,8 @@ const awardXP = async (userId, amount, reason) => {
     await checkAndAwardBadges(userId, { level: newLevel.level });
   }
 
-  const r = await getRedis();
-  await r.zAdd('leaderboard:global', [{ score: xp_total, value: userId }]);
+  // Update leaderboard in Redis (non-blocking)
+  await redisZAdd('leaderboard:global', [{ score: xp_total, value: userId }]);
 
   const nextLevel = LEVELS.find((l) => l.level === newLevel.level + 1);
   const xp_to_next_level = nextLevel ? nextLevel.xp_required - xp_total : 0;
@@ -44,41 +54,38 @@ const awardXP = async (userId, amount, reason) => {
   return { xp_total, level: newLevel, leveled_up: leveledUp, xp_to_next_level };
 };
 
+// ─── Check streak ─────────────────────────────────────────────────────────────
 const checkStreak = async (userId) => {
-  const r   = await getRedis();
-  const key = `streak:${userId}`;
-  const stored = await r.get(key);
-
-  const now      = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  const key    = `streak:${userId}`;
+  const stored = await redisGet(key);
+  const now    = new Date();
+  const today  = now.toISOString().split('T')[0];
 
   if (stored) {
     const { count, lastDate } = JSON.parse(stored);
-    if (lastDate === todayStr) return { streak: count, xp_earned: 0, already_checked: true };
+    if (lastDate === today) return { streak: count, xp_earned: 0, already_checked: true };
 
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
 
     const newCount = lastDate === yesterdayStr ? count + 1 : 1;
-    await r.setEx(key, 48 * 3600, JSON.stringify({ count: newCount, lastDate: todayStr }));
+    await redisSetEx(key, 48 * 3600, JSON.stringify({ count: newCount, lastDate: today }));
     await pool.query(
       'UPDATE learner_profiles SET streak_days = $1, longest_streak = GREATEST(longest_streak, $1) WHERE user_id = $2',
       [newCount, userId]
     );
-
-    const xpEarned = XP.DAILY_STREAK;
-    await awardXP(userId, xpEarned, 'daily_streak');
+    await awardXP(userId, XP.DAILY_STREAK, 'daily_streak');
     await checkAndAwardBadges(userId, { streak_days: newCount });
-
-    return { streak: newCount, xp_earned: xpEarned };
+    return { streak: newCount, xp_earned: XP.DAILY_STREAK };
   }
 
-  await r.setEx(key, 48 * 3600, JSON.stringify({ count: 1, lastDate: todayStr }));
+  await redisSetEx(key, 48 * 3600, JSON.stringify({ count: 1, lastDate: today }));
   await pool.query('UPDATE learner_profiles SET streak_days = 1 WHERE user_id = $1', [userId]);
   return { streak: 1, xp_earned: XP.DAILY_STREAK };
 };
 
+// ─── Badge checking ───────────────────────────────────────────────────────────
 const checkAndAwardBadges = async (userId, context) => {
   const { rows: allBadges } = await pool.query('SELECT * FROM badges WHERE is_active = true');
   const { rows: earned }    = await pool.query('SELECT badge_id FROM user_badges WHERE user_id = $1', [userId]);
@@ -87,20 +94,16 @@ const checkAndAwardBadges = async (userId, context) => {
   const newBadges = [];
   for (const badge of allBadges) {
     if (earnedIds.has(badge.id)) continue;
-    const criteria = badge.criteria;
-    let qualifies  = false;
-
-    if (criteria.streak_days        && context.streak_days        >= criteria.streak_days)        qualifies = true;
-    if (criteria.level              && context.level              >= criteria.level)              qualifies = true;
-    if (criteria.lessons_completed  && context.lessons_completed  >= criteria.lessons_completed)  qualifies = true;
-    if (criteria.courses_completed  && context.courses_completed  >= criteria.courses_completed)  qualifies = true;
-    if (criteria.perfect_score      && context.perfect_score)                                     qualifies = true;
+    const c = badge.criteria;
+    let qualifies = false;
+    if (c.streak_days       && context.streak_days       >= c.streak_days)       qualifies = true;
+    if (c.level             && context.level             >= c.level)             qualifies = true;
+    if (c.lessons_completed && context.lessons_completed >= c.lessons_completed) qualifies = true;
+    if (c.courses_completed && context.courses_completed >= c.courses_completed) qualifies = true;
+    if (c.perfect_score     && context.perfect_score)                            qualifies = true;
 
     if (qualifies) {
-      await pool.query(
-        'INSERT INTO user_badges (user_id, badge_id) VALUES ($1,$2) ON CONFLICT DO NOTHING',
-        [userId, badge.id]
-      );
+      await pool.query('INSERT INTO user_badges (user_id, badge_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [userId, badge.id]);
       if (badge.xp_value > 0) await awardXP(userId, badge.xp_value, `badge_${badge.name}`);
       newBadges.push(badge);
     }
@@ -108,11 +111,11 @@ const checkAndAwardBadges = async (userId, context) => {
   return newBadges;
 };
 
+// ─── Leaderboard ──────────────────────────────────────────────────────────────
 const getLeaderboard = async (limit = 20) => {
-  const r = await getRedis();
-  const entries = await r.zRangeWithScores('leaderboard:global', 0, limit - 1, { REV: true });
+  const entries = await redisZRangeWithScores('leaderboard:global', 0, limit - 1, { REV: true });
 
-  // Always enrich with user data from DB — Redis only stores user_id + score
+  // Fall back to DB if Redis is empty or unavailable
   if (!entries.length) {
     const { rows } = await pool.query(
       `SELECT u.id AS user_id, u.first_name, u.last_name, u.avatar_url,
@@ -124,12 +127,11 @@ const getLeaderboard = async (limit = 20) => {
     return rows.map((r, i) => ({ ...r, rank: i + 1 }));
   }
 
-  // Enrich Redis entries with user names and levels from DB
+  // Enrich Redis entries with user names + levels from DB
   const userIds = entries.map(e => e.value);
   const { rows: users } = await pool.query(
     `SELECT u.id, u.first_name, u.last_name, u.avatar_url, lp.level
-     FROM users u
-     LEFT JOIN learner_profiles lp ON lp.user_id = u.id
+     FROM users u LEFT JOIN learner_profiles lp ON lp.user_id = u.id
      WHERE u.id = ANY($1::uuid[])`,
     [userIds]
   );
@@ -146,6 +148,7 @@ const getLeaderboard = async (limit = 20) => {
   }));
 };
 
+// ─── Gamification profile ─────────────────────────────────────────────────────
 const getGamificationProfile = async (userId) => {
   const { rows } = await pool.query(
     `SELECT lp.xp_total, lp.level, lp.streak_days, lp.longest_streak,
@@ -163,7 +166,6 @@ const getGamificationProfile = async (userId) => {
   profile.level_info = getLevelForXP(profile.xp_total);
   const nextLevel = LEVELS.find((l) => l.level === profile.level + 1);
   profile.xp_to_next_level = nextLevel ? nextLevel.xp_required - profile.xp_total : 0;
-
   return profile;
 };
 
