@@ -106,11 +106,17 @@ router.post('/generate-and-save', authorize('learner', 'admin'), async (req, res
       [req.user.id, course.id]
     );
 
-    // 6. Award XP for generating a course
+    // 6. Award XP for generating a course + check streak
     await pool.query(
       `UPDATE learner_profiles SET xp_total = xp_total + 25 WHERE user_id = $1`,
       [req.user.id]
     );
+
+    // 7. Check and update streak (generating a course counts as daily activity)
+    try {
+      const { checkStreak } = require('../services/gamification.service');
+      await checkStreak(req.user.id);
+    } catch {}  // non-fatal
 
     sendCreated(res, {
       course,

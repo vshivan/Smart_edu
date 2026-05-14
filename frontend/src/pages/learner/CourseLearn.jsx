@@ -576,6 +576,30 @@ export default function CourseLearn() {
                   )}
                 </div>
 
+                {/* YouTube video search link */}
+                <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-800/30 rounded-xl flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center shrink-0">
+                      {/* YouTube icon */}
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-red-600" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-text-primary dark:text-white">Watch Video Lecture</p>
+                      <p className="text-xs text-text-muted">Find related YouTube tutorials for this lesson</p>
+                    </div>
+                  </div>
+                  <a
+                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(lesson.title + ' tutorial ' + (course?.subject || ''))}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all shrink-0"
+                  >
+                    Search YouTube →
+                  </a>
+                </div>
+
                 {/* XP hint */}
                 {!lesson.completed && lesson.xp_reward > 0 && (
                   <div className="flex items-center gap-2 text-sm text-text-muted">

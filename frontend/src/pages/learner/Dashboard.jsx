@@ -30,13 +30,18 @@ const StatCard = ({ icon: Icon, label, value, color, bg, trend }) => (
 const DAILY_GOALS = [5, 10, 15, 20];
 
 export default function Dashboard() {
-  const { user } = useAuthStore();
+  const { user, updateUser } = useAuthStore();
   const [dailyGoal, setDailyGoal] = useState(() => parseInt(localStorage.getItem('daily_goal') || '10'));
   const [showGoalPicker, setShowGoalPicker] = useState(false);
 
-  // Auto-check streak on dashboard load
+  // Auto-check streak on dashboard load + update authStore so TopBar reflects it
   useEffect(() => {
-    api.post('/gamification/streak').catch(() => {});
+    api.post('/gamification/streak')
+      .then(r => {
+        const streak = r.data?.data?.streak;
+        if (streak !== undefined) updateUser({ streak });
+      })
+      .catch(() => {});
   }, []);
 
   const { data: profile } = useQuery({
