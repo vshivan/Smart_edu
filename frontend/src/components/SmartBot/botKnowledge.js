@@ -6,7 +6,7 @@
 export const PAGE_KNOWLEDGE = {
   // ── Landing ────────────────────────────────────────────────────────────────
   '/': {
-    title: 'Welcome to SmartEduLearn!',
+    title: 'Welcome to SmartEduMate!',
     emoji: '🎓',
     description: 'AI-powered personalized learning platform',
     tips: [
@@ -25,7 +25,7 @@ export const PAGE_KNOWLEDGE = {
   '/login': {
     title: 'Signing In',
     emoji: '🔐',
-    description: 'Access your SmartEduLearn account',
+    description: 'Access your SmartEduMate account',
     tips: [
       'Use your email and password to sign in',
       'Click "Continue with Google" for one-click login',
@@ -38,7 +38,7 @@ export const PAGE_KNOWLEDGE = {
   '/register': {
     title: 'Creating Your Account',
     emoji: '✨',
-    description: 'Join thousands of learners on SmartEduLearn',
+    description: 'Join thousands of learners on SmartEduMate',
     tips: [
       'Choose "Learner" to take courses and earn XP',
       'Choose "Tutor" to teach and earn from sessions',
@@ -326,7 +326,7 @@ export const ONBOARDING_FLOWS = {
     {
       step: 1,
       title: 'Welcome! 🎉',
-      message: "Hello! I'm **Ana**, your AI professor and personal study assistant on SmartEduLearn.\n\nI'm not just a guide — I can **teach** any topic, **quiz** you, create **study notes**, and give **exam-ready answers**. Let me show you around!",
+      message: "Hello! I'm **Ana**, your AI professor and personal study assistant on SmartEduMate.\n\nI'm not just a guide — I can **teach** any topic, **quiz** you, create **study notes**, and give **exam-ready answers**. Let me show you around!",
       action: null,
     },
     {
@@ -358,7 +358,7 @@ export const ONBOARDING_FLOWS = {
     {
       step: 1,
       title: 'Welcome, Tutor! 🎉',
-      message: "Hello! I'm **Ana**, your AI professor assistant on SmartEduLearn.\n\nAs a tutor, your expertise can help thousands of learners. Let me walk you through getting started!",
+      message: "Hello! I'm **Ana**, your AI professor assistant on SmartEduMate.\n\nAs a tutor, your expertise can help thousands of learners. Let me walk you through getting started!",
       action: null,
     },
     {

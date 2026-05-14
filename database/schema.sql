@@ -1,5 +1,5 @@
 -- ============================================================
--- SmartEduLearn — PostgreSQL Schema
+-- SmartEduMate — PostgreSQL Schema
 -- ============================================================
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";

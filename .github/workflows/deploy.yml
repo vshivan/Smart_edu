@@ -1,4 +1,4 @@
-name: Deploy SmartEduLearn
+name: Deploy SmartEduMate
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB:       smartedulear_test
+          POSTGRES_DB:       smartedumate_test
           POSTGRES_USER:     sel_user
           POSTGRES_PASSWORD: sel_pass
         ports: ["5432:5432"]
@@ -58,7 +58,7 @@ jobs:
         env:
           NODE_ENV:     test
           PORT:         3001
-          DATABASE_URL: postgresql://sel_user:sel_pass@localhost:5432/smartedulear_test
+          DATABASE_URL: postgresql://sel_user:sel_pass@localhost:5432/smartedumate_test
           MONGODB_URL:  mongodb://localhost:27017
           REDIS_URL:    redis://localhost:6379
           JWT_SECRET:   test_secret_for_ci_only_not_production
@@ -92,7 +92,7 @@ jobs:
         id: meta_server
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/smartedulear-server
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/smartedumate-server
           tags: |
             type=sha,prefix=sha-
             type=raw,value=latest
@@ -101,7 +101,7 @@ jobs:
         id: meta_frontend
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/smartedulear-frontend
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/smartedumate-frontend
           tags: |
             type=sha,prefix=sha-
             type=raw,value=latest
@@ -143,7 +143,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key:      ${{ secrets.SSH_PRIVATE_KEY }}
           source:   "docker-compose.prod.yml,nginx/nginx.prod.conf,database/schema.sql"
-          target:   "/opt/smartedulear"
+          target:   "/opt/smartedumate"
 
       - name: Deploy on server via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -153,7 +153,7 @@ jobs:
           key:      ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
-            cd /opt/smartedulear
+            cd /opt/smartedumate
 
             # Write production env file from GitHub secret
             echo "${{ secrets.PRODUCTION_ENV }}" > .env.production

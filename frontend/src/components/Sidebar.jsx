@@ -98,7 +98,7 @@ export default function Sidebar() {
             <Zap size={15} className="text-white" />
           </div>
           <div>
-            <span className="font-bold text-text-primary dark:text-white text-sm tracking-tight">SmartEduLearn</span>
+            <span className="font-bold text-text-primary dark:text-white text-sm tracking-tight">SmartEduMate</span>
             <p className="text-[10px] text-text-muted dark:text-slate-500 capitalize">{user?.role} Portal</p>
           </div>
         </div>

@@ -155,7 +155,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const data = await register(form);
-      toast.success(`Welcome to SmartEduLearn, ${data.user.first_name}! 🎉`);
+      toast.success(`Welcome to SmartEduMate, ${data.user.first_name}! 🎉`);
       navigate(data.user.role === 'tutor' ? '/tutor/dashboard' : '/dashboard');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Registration failed. Please try again.');

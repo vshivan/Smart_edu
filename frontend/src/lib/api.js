@@ -3,7 +3,7 @@ import axios from 'axios';
 // ── Base URL resolution ───────────────────────────────────────────────────────
 // Dev (npm run dev):  Vite proxy rewrites /api → localhost:3001, so baseURL = /api
 // Docker (nginx):     nginx proxies /api/ → server:3001/, so baseURL = /api
-// Render + Vercel:    VITE_API_URL = https://smartedulear-server.onrender.com
+// Render + Vercel:    VITE_API_URL = https://smartedumate-server.onrender.com
 const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const api = axios.create({

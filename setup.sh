@@ -1,6 +1,6 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════════════════════
-# SmartEduLearn — One-command local setup
+# SmartEduMate — One-command local setup
 # Usage: bash setup.sh
 # ════════════════════════════════════════════════════════════════════════════
 
@@ -11,7 +11,7 @@ log()  { echo -e "${GREEN}✓ $1${NC}"; }
 warn() { echo -e "${YELLOW}⚠ $1${NC}"; }
 err()  { echo -e "${RED}✗ $1${NC}"; exit 1; }
 
-echo -e "${GREEN}🎓 SmartEduLearn Setup${NC}"
+echo -e "${GREEN}🎓 SmartEduMate Setup${NC}"
 echo "════════════════════════════════"
 
 # 1. Node.js check

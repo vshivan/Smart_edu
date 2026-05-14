@@ -268,7 +268,7 @@ function AppearanceTab() {
     <div className="space-y-6">
       <div>
         <h2 className="text-base font-semibold text-text-primary">Appearance</h2>
-        <p className="text-sm text-text-muted mt-0.5">Customize how SmartEduLearn looks</p>
+        <p className="text-sm text-text-muted mt-0.5">Customize how SmartEduMate looks</p>
       </div>
 
       <div className="card">

@@ -1,6 +1,6 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════════════════════
-# SmartEduLearn — Manual Deploy Script
+# SmartEduMate — Manual Deploy Script
 # Run from your LOCAL machine to deploy to the VPS
 # Usage: bash scripts/deploy.sh
 # ════════════════════════════════════════════════════════════════════════════
@@ -10,7 +10,7 @@ set -e
 # ── Config — edit these ───────────────────────────────────────────────────────
 SSH_USER="smartedu"
 SSH_HOST="YOUR_SERVER_IP"
-APP_DIR="/opt/smartedulear"
+APP_DIR="/opt/smartedumate"
 DOMAIN="YOUR_DOMAIN.com"
 
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
@@ -27,17 +27,17 @@ log "Starting deployment to $SSH_HOST..."
 
 # ── 1. Build images locally ───────────────────────────────────────────────────
 log "Building server image..."
-docker build -t smartedulear-server:latest ./server
+docker build -t smartedumate-server:latest ./server
 
 log "Building frontend image..."
 docker build \
   --build-arg VITE_API_URL="https://$DOMAIN/api" \
-  -t smartedulear-frontend:latest \
+  -t smartedumate-frontend:latest \
   ./frontend
 
 # ── 2. Save and transfer images ───────────────────────────────────────────────
 log "Saving Docker images..."
-docker save smartedulear-server:latest smartedulear-frontend:latest | gzip > /tmp/sel_images.tar.gz
+docker save smartedumate-server:latest smartedumate-frontend:latest | gzip > /tmp/sel_images.tar.gz
 
 log "Transferring images to server (this may take a few minutes)..."
 scp /tmp/sel_images.tar.gz "$SSH_USER@$SSH_HOST:/tmp/sel_images.tar.gz"
@@ -54,7 +54,7 @@ scp -r database/             "$SSH_USER@$SSH_HOST:$APP_DIR/"
 log "Deploying on server..."
 ssh "$SSH_USER@$SSH_HOST" << 'REMOTE'
   set -e
-  cd /opt/smartedulear
+  cd /opt/smartedumate
 
   echo "Loading Docker images..."
   docker load < /tmp/sel_images.tar.gz

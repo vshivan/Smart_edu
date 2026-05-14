@@ -1,4 +1,4 @@
-# 🎓 SmartEduLearn
+# 🎓 SmartEduMate
 
 > AI-powered personalized learning platform — combining AI course generation, gamified progression, tutor marketplace, and enterprise admin control.
 
@@ -7,7 +7,7 @@
 ## 🏗️ Project Structure
 
 ```
-smartedulear/
+smartedumate/
 ├── server/                   # Unified backend (all services in one)
 │   ├── src/
 │   │   ├── index.js          # Entry point — Express + Socket.io
@@ -83,7 +83,7 @@ npm run install:all
 
 # 3. Copy and configure env
 cp .env.example .env
-# Set DATABASE_URL=postgresql://sel_user:sel_pass@localhost:5432/smartedulear
+# Set DATABASE_URL=postgresql://sel_user:sel_pass@localhost:5432/smartedumate
 # Set MONGODB_URL=mongodb://localhost:27017
 # Set REDIS_URL=redis://localhost:6379
 
@@ -172,4 +172,4 @@ All routes are served from a single backend on port `3000`.
 ---
 
 ## 📄 License
-MIT © SmartEduLearn
+MIT © SmartEduMate

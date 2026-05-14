@@ -53,8 +53,8 @@ const sendEmail = async ({ to, subject, html }) => {
   try {
     const t    = getTransporter();
     const from = process.env.GMAIL_USER
-      ? `SmartEduLearn <${process.env.GMAIL_USER}>`
-      : 'SmartEduLearn <noreply@smartedulear.com>';
+      ? `SmartEduMate <${process.env.GMAIL_USER}>`
+      : 'SmartEduMate <noreply@smartedumate.com>';
 
     const info = await t.sendMail({ from, to, subject, html });
 
@@ -82,7 +82,7 @@ const emailTemplate = (title, message, ctaText = null, ctaUrl = null) => `
 <body style="margin:0;padding:0;background:#f8fafc;font-family:Inter,system-ui,sans-serif;">
   <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07);">
     <div style="background:linear-gradient(135deg,#4f46e5,#6366f1);padding:32px 40px;text-align:center;">
-      <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">SmartEduLearn</h1>
+      <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">SmartEduMate</h1>
       <p style="margin:6px 0 0;color:#c7d2fe;font-size:13px;">Your AI-Powered Learning Platform</p>
     </div>
     <div style="padding:36px 40px;">
@@ -97,7 +97,7 @@ const emailTemplate = (title, message, ctaText = null, ctaUrl = null) => `
     </div>
     <div style="padding:20px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
       <p style="margin:0;color:#94a3b8;font-size:12px;">
-        © 2026 SmartEduLearn ·
+        © 2026 SmartEduMate ·
         <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}" style="color:#6366f1;text-decoration:none;">Visit Platform</a>
       </p>
     </div>

@@ -20,7 +20,7 @@ function RoleSelector({ onSelect, loading }) {
         <div className="w-14 h-14 bg-gradient-to-br from-brand-500 to-brand-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-md">
           <Zap size={24} className="text-white" />
         </div>
-        <h1 className="text-2xl font-bold text-text-primary">Welcome to SmartEduLearn!</h1>
+        <h1 className="text-2xl font-bold text-text-primary">Welcome to SmartEduMate!</h1>
         <p className="text-text-muted mt-2 text-sm">How would you like to use the platform?</p>
       </div>
 

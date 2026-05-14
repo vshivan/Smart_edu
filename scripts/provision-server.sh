@@ -1,6 +1,6 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════════════════════
-# SmartEduLearn — VPS Provisioning Script
+# SmartEduMate — VPS Provisioning Script
 # Run this ONCE on a fresh Ubuntu 22.04 / 24.04 server as root
 # Usage: bash provision-server.sh
 # ════════════════════════════════════════════════════════════════════════════
@@ -8,7 +8,7 @@
 set -e
 
 DOMAIN="YOUR_DOMAIN.com"
-APP_DIR="/opt/smartedulear"
+APP_DIR="/opt/smartedumate"
 APP_USER="smartedu"
 
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'

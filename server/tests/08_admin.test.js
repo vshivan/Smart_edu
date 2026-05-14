@@ -3,13 +3,13 @@
  * Covers: dashboard, user management, tutor verification, analytics, audit log
  *
  * Admin credentials (set via env or defaults to test account):
- *   ADMIN_EMAIL=admin2@smartedulear.com
+ *   ADMIN_EMAIL=admin2@smartedumate.com
  *   ADMIN_PASSWORD=Admin@123
  */
 const { client, authHeader, expectSuccess, expectFail } = require('./helpers/setup');
 
 const ts = Date.now();
-const ADMIN_EMAIL    = process.env.ADMIN_EMAIL    || 'admin2@smartedulear.com';
+const ADMIN_EMAIL    = process.env.ADMIN_EMAIL    || 'admin2@smartedumate.com';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin@123';
 
 let adminToken, learnerToken, learnerId;

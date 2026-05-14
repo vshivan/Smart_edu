@@ -35,8 +35,8 @@ const getTransporter = () => {
 const sendMail = async ({ to, subject, html, text }) => {
   const t = getTransporter();
   const from = process.env.GMAIL_USER
-    ? `"SmartEduLearn" <${process.env.GMAIL_USER}>`
-    : '"SmartEduLearn" <noreply@smartedulear.com>';
+    ? `"SmartEduMate" <${process.env.GMAIL_USER}>`
+    : '"SmartEduMate" <noreply@smartedumate.com>';
 
   try {
     const info = await t.sendMail({ from, to, subject, html, text });
@@ -86,7 +86,7 @@ const sendPasswordResetEmail = async (to, firstName, resetToken) => {
           <!-- Header -->
           <tr>
             <td style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:32px;text-align:center;">
-              <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">🎓 SmartEduLearn</h1>
+              <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">🎓 SmartEduMate</h1>
               <p style="margin:8px 0 0;color:rgba(255,255,255,0.8);font-size:14px;">AI-Powered Learning Platform</p>
             </td>
           </tr>
@@ -132,7 +132,7 @@ const sendPasswordResetEmail = async (to, firstName, resetToken) => {
           <tr>
             <td style="padding:24px 32px;border-top:1px solid #2a2a3e;text-align:center;">
               <p style="margin:0;color:#475569;font-size:12px;">
-                © ${new Date().getFullYear()} SmartEduLearn. All rights reserved.
+                © ${new Date().getFullYear()} SmartEduMate. All rights reserved.
               </p>
             </td>
           </tr>
@@ -144,9 +144,9 @@ const sendPasswordResetEmail = async (to, firstName, resetToken) => {
 </body>
 </html>`;
 
-  const text = `Hi ${firstName},\n\nReset your SmartEduLearn password here:\n${resetUrl}\n\nThis link expires in ${expiryMinutes} minutes.\n\nIf you didn't request this, ignore this email.`;
+  const text = `Hi ${firstName},\n\nReset your SmartEduMate password here:\n${resetUrl}\n\nThis link expires in ${expiryMinutes} minutes.\n\nIf you didn't request this, ignore this email.`;
 
-  return sendMail({ to, subject: 'Reset your SmartEduLearn password', html, text });
+  return sendMail({ to, subject: 'Reset your SmartEduMate password', html, text });
 };
 
 /**
@@ -165,7 +165,7 @@ const sendWelcomeEmail = async (to, firstName) => {
         <table width="560" cellpadding="0" cellspacing="0" style="background:#1a1a2e;border-radius:16px;border:1px solid #2a2a3e;overflow:hidden;">
           <tr>
             <td style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:32px;text-align:center;">
-              <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">🎓 SmartEduLearn</h1>
+              <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">🎓 SmartEduMate</h1>
             </td>
           </tr>
           <tr>
@@ -189,7 +189,7 @@ const sendWelcomeEmail = async (to, firstName) => {
           </tr>
           <tr>
             <td style="padding:24px 32px;border-top:1px solid #2a2a3e;text-align:center;">
-              <p style="margin:0;color:#475569;font-size:12px;">© ${new Date().getFullYear()} SmartEduLearn</p>
+              <p style="margin:0;color:#475569;font-size:12px;">© ${new Date().getFullYear()} SmartEduMate</p>
             </td>
           </tr>
         </table>
@@ -199,9 +199,9 @@ const sendWelcomeEmail = async (to, firstName) => {
 </body>
 </html>`;
 
-  const text = `Welcome to SmartEduLearn, ${firstName}!\n\nStart learning: ${loginUrl}`;
+  const text = `Welcome to SmartEduMate, ${firstName}!\n\nStart learning: ${loginUrl}`;
 
-  return sendMail({ to, subject: `Welcome to SmartEduLearn, ${firstName}!`, html, text });
+  return sendMail({ to, subject: `Welcome to SmartEduMate, ${firstName}!`, html, text });
 };
 
 module.exports = { sendMail, sendPasswordResetEmail, sendWelcomeEmail };

@@ -122,7 +122,7 @@ export function generateResponse(userText, intent, mode, pageInfo, user, quizSta
 
   // ── Platform intents ────────────────────────────────────────────────────────
   const platformResponses = {
-    platform_xp: `**XP (Experience Points)** is your learning currency on SmartEduLearn! 🌟\n\nHere's how you earn it:\n• ✅ Complete a lesson → **+10 XP**\n• 🎯 Pass a quiz → **+50 XP**\n• 💯 Perfect quiz score → **+100 XP**\n• 📚 Complete a course → **+500 XP**\n• 🔥 Daily streak → **+20 XP/day**\n\nXP fills your level bar. Reach enough XP and you level up — from Novice all the way to Sage! 🧙‍♀️\n\nWant me to simplify this further or give you an exam-ready answer?`,
+    platform_xp: `**XP (Experience Points)** is your learning currency on SmartEduMate! 🌟\n\nHere's how you earn it:\n• ✅ Complete a lesson → **+10 XP**\n• 🎯 Pass a quiz → **+50 XP**\n• 💯 Perfect quiz score → **+100 XP**\n• 📚 Complete a course → **+500 XP**\n• 🔥 Daily streak → **+20 XP/day**\n\nXP fills your level bar. Reach enough XP and you level up — from Novice all the way to Sage! 🧙‍♀️\n\nWant me to simplify this further or give you an exam-ready answer?`,
 
     platform_streak: `**Streaks** are your daily login consistency tracker! 🔥\n\nHere's how it works:\n• Log in **every day** → streak count goes up\n• Miss a day → streak resets to 0\n• You get a **48-hour grace window** (so missing one day won't always break it)\n• Each streak day earns you **+20 XP**\n\n🏅 Streak milestones unlock special badges:\n• 7-day streak → First Week badge\n• 30-day streak → Dedicated Learner badge\n\nThink of it like a gym habit — consistency is everything! 💪`,
 

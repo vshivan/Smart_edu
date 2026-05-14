@@ -26,7 +26,7 @@ export default function Navbar() {
             <div className="w-8 h-8 bg-gradient-to-br from-brand-500 to-brand-700 rounded-lg flex items-center justify-center shadow-sm">
               <Zap size={16} className="text-white" />
             </div>
-            <span className="font-bold text-text-primary dark:text-white text-lg tracking-tight">SmartEduLearn</span>
+            <span className="font-bold text-text-primary dark:text-white text-lg tracking-tight">SmartEduMate</span>
           </Link>
 
           {/* Desktop nav — only show when logged in */}

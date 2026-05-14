@@ -10,7 +10,7 @@ is not properly configured or the app is in "Testing" mode with unverified users
 Go to: https://console.cloud.google.com → APIs & Services → OAuth consent screen
 
 1. **User Type**: Select "External"
-2. **App name**: SmartEduLearn
+2. **App name**: SmartEduMate
 3. **User support email**: your email
 4. **Developer contact**: your email
 5. Click **Save and Continue**

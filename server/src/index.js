@@ -72,14 +72,14 @@ app.use(express.urlencoded({ extended: true }));
 
 // ─── Test / health routes (always respond — Render health check uses these) ───
 app.get('/', (_, res) => res.json({
-  message: 'SmartEduLearn API is running',
+  message: 'SmartEduMate API is running',
   version: '1.3',
   docs: '/health',
 }));
 
 app.get('/health', (_, res) => res.json({
   status: 'ok',
-  service: 'smartedulear-unified',
+  service: 'smartedumate-unified',
   timestamp: new Date(),
   env: process.env.NODE_ENV || 'development',
 }));
@@ -288,7 +288,7 @@ async function runMigrations() {
 
 // ─── Start server ─────────────────────────────────────────────────────────────
 httpServer.listen(PORT, '0.0.0.0', async () => {
-  logger.info(`🚀 SmartEduLearn running on port ${PORT}`);
+  logger.info(`🚀 SmartEduMate running on port ${PORT}`);
   logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   logger.info(`🌐 CORS origins: ${process.env.ALLOWED_ORIGINS || 'http://localhost:5173'}`);
 

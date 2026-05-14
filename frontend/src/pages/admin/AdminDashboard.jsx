@@ -53,7 +53,7 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="page-title">Platform Overview</h1>
-        <p className="page-subtitle">Real-time metrics across SmartEduLearn</p>
+        <p className="page-subtitle">Real-time metrics across SmartEduMate</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

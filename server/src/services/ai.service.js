@@ -276,7 +276,7 @@ const chat = async ({ session_id, message, course_id, learner_id, learner_name, 
   const recentMessages = (session.messages || []).slice(-10);
   const history = recentMessages.map(m => `${m.role === 'user' ? 'Student' : 'Tutor'}: ${m.content}`).join('\n');
 
-  const prompt = `You are an expert AI tutor for SmartEduLearn.
+  const prompt = `You are an expert AI tutor for SmartEduMate.
 Student: ${learner_name} (Level ${level}).
 Be concise, encouraging, and educational.
 

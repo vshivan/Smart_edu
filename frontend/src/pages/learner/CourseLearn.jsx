@@ -103,7 +103,7 @@ function CertificateModal({ cert, onClose }) {
         .hash { font-size: 11px; color: #d1d5db; margin-top: 8px; font-family: monospace; }
       </style></head><body>
       <div class="cert">
-        <div class="logo">⚡ SmartEduLearn</div>
+        <div class="logo">⚡ SmartEduMate</div>
         <div class="title">Certificate of Completion</div>
         <div class="subtitle">This is to certify that</div>
         <div class="name">${cert.learner_name}</div>
@@ -136,7 +136,7 @@ function CertificateModal({ cert, onClose }) {
         {/* Certificate preview */}
         <div className="border-4 border-brand-500 rounded-2xl p-8 text-center relative mb-6">
           <div className="absolute inset-2 border border-brand-200 dark:border-brand-800/50 rounded-xl pointer-events-none" />
-          <div className="text-brand-600 text-xs font-bold uppercase tracking-widest mb-3">⚡ SmartEduLearn</div>
+          <div className="text-brand-600 text-xs font-bold uppercase tracking-widest mb-3">⚡ SmartEduMate</div>
           <h2 className="text-2xl font-bold text-text-primary dark:text-white mb-1">Certificate of Completion</h2>
           <p className="text-text-muted text-sm mb-4">This is to certify that</p>
           <p className="text-3xl font-bold text-brand-600 italic mb-1">{cert.learner_name}</p>

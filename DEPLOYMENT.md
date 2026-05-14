@@ -1,4 +1,4 @@
-# 🚀 SmartEduLearn — Deployment Guide (No Docker Required)
+# 🚀 SmartEduMate — Deployment Guide (No Docker Required)
 
 Deploy the full stack for **free** using managed cloud services.
 
@@ -19,10 +19,10 @@ Deploy the full stack for **free** using managed cloud services.
 ## Step 1 — PostgreSQL on Neon (5 minutes)
 
 1. Go to [neon.tech](https://neon.tech) → **Sign up free**
-2. Create a new project → name it `smartedulear`
+2. Create a new project → name it `smartedumate`
 3. Copy the **Connection string** — looks like:
    ```
-   postgresql://user:password@ep-xxx.us-east-1.aws.neon.tech/smartedulear?sslmode=require
+   postgresql://user:password@ep-xxx.us-east-1.aws.neon.tech/smartedumate?sslmode=require
    ```
 4. Run the schema to create all tables:
    ```bash
@@ -50,7 +50,7 @@ Deploy the full stack for **free** using managed cloud services.
 2. Click **New → Web Service**
 3. Connect your GitHub repo: `vshivan/Smart_edu`
 4. Configure:
-   - **Name:** `smartedulear-server`
+   - **Name:** `smartedumate-server`
    - **Root Directory:** `server`
    - **Runtime:** Node
    - **Build Command:** `npm install`
@@ -71,13 +71,13 @@ Deploy the full stack for **free** using managed cloud services.
    | `GEMINI_MODEL` | `gemini-1.5-flash` |
    | `GOOGLE_CLIENT_ID` | your Google OAuth client ID |
    | `GOOGLE_CLIENT_SECRET` | your Google OAuth client secret |
-   | `GOOGLE_CALLBACK_URL` | `https://smartedulear-server.onrender.com/auth/google/callback` |
+   | `GOOGLE_CALLBACK_URL` | `https://smartedumate-server.onrender.com/auth/google/callback` |
    | `GMAIL_USER` | your Gmail address *(optional)* |
    | `GMAIL_APP_PASSWORD` | your Gmail app password *(optional)* |
 
 6. Click **Create Web Service** → wait ~3 minutes for first deploy
 
-7. Your backend URL will be: `https://smartedulear-server.onrender.com`
+7. Your backend URL will be: `https://smartedumate-server.onrender.com`
 
 8. **Run the DB migration** — open Render Shell or use Neon SQL editor:
    ```bash
@@ -101,11 +101,11 @@ Deploy the full stack for **free** using managed cloud services.
 5. Add **Environment Variable**:
    | Key | Value |
    |-----|-------|
-   | `VITE_API_URL` | `https://smartedulear-server.onrender.com` |
+   | `VITE_API_URL` | `https://smartedumate-server.onrender.com` |
 
 6. Click **Deploy** → wait ~2 minutes
 
-7. Your frontend URL will be: `https://smartedulear.vercel.app` (or similar)
+7. Your frontend URL will be: `https://smartedumate.vercel.app` (or similar)
 
 8. **Go back to Render** and update `FRONTEND_URL` and `ALLOWED_ORIGINS` with your actual Vercel URL.
 
@@ -117,11 +117,11 @@ Deploy the full stack for **free** using managed cloud services.
 2. APIs & Services → Credentials → your OAuth client
 3. Add to **Authorized redirect URIs**:
    ```
-   https://smartedulear-server.onrender.com/auth/google/callback
+   https://smartedumate-server.onrender.com/auth/google/callback
    ```
 4. Add to **Authorized JavaScript origins**:
    ```
-   https://smartedulear.vercel.app
+   https://smartedumate.vercel.app
    ```
 
 ---
@@ -130,10 +130,10 @@ Deploy the full stack for **free** using managed cloud services.
 
 ```bash
 # Health check
-curl https://smartedulear-server.onrender.com/health
+curl https://smartedumate-server.onrender.com/health
 
 # Should return:
-# {"status":"ok","service":"smartedulear-unified","timestamp":"..."}
+# {"status":"ok","service":"smartedumate-unified","timestamp":"..."}
 ```
 
 Then open your Vercel URL and test:
@@ -156,9 +156,9 @@ Just use your Neon + Upstash URLs in `server/.env`. No local DB needed.
 **PostgreSQL:**
 1. Download from [postgresql.org/download/windows](https://www.postgresql.org/download/windows/)
 2. Install with default settings, set a password
-3. Run: `psql -U postgres -c "CREATE DATABASE smartedulear;"`
-4. Run schema: `psql -U postgres -d smartedulear -f database/schema.sql`
-5. `DATABASE_URL=postgresql://postgres:yourpassword@localhost:5432/smartedulear`
+3. Run: `psql -U postgres -c "CREATE DATABASE smartedumate;"`
+4. Run schema: `psql -U postgres -d smartedumate -f database/schema.sql`
+5. `DATABASE_URL=postgresql://postgres:yourpassword@localhost:5432/smartedumate`
 
 **Redis (Windows):**
 1. Install [Memurai](https://www.memurai.com/) — Redis-compatible for Windows, free

@@ -80,7 +80,7 @@ export default function AdminLayout() {
               <Zap size={15} className="text-white" />
             </div>
             <div>
-              <p className="font-bold text-text-primary text-sm tracking-tight">SmartEduLearn</p>
+              <p className="font-bold text-text-primary text-sm tracking-tight">SmartEduMate</p>
               <p className="text-[10px] text-brand-600 font-semibold flex items-center gap-1">
                 <Shield size={9} /> Admin Panel
               </p>

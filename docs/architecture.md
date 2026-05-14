@@ -1,4 +1,4 @@
-# SmartEduLearn — System Architecture
+# SmartEduMate — System Architecture
 
 ## High-Level Diagram
 

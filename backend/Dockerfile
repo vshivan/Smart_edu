@@ -1,5 +1,5 @@
 # ════════════════════════════════════════════════════════════════════════════
-# SmartEduLearn — Single Dockerfile for all backend services
+# SmartEduMate — Single Dockerfile for all backend services
 #
 # Usage:
 #   docker build --build-arg SERVICE=auth-service -t sel-auth .

@@ -4,7 +4,7 @@ services:
     image: postgres:16-alpine
     container_name: sel_postgres
     environment:
-      POSTGRES_DB:       smartedulear
+      POSTGRES_DB:       smartedumate
       POSTGRES_USER:     ${POSTGRES_USER:-sel_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sel_pass}
     ports:
@@ -60,7 +60,7 @@ services:
     environment:
       NODE_ENV:     development
       PORT:         3001
-      DATABASE_URL: postgresql://${POSTGRES_USER:-sel_user}:${POSTGRES_PASSWORD:-sel_pass}@postgres:5432/smartedulear
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sel_user}:${POSTGRES_PASSWORD:-sel_pass}@postgres:5432/smartedumate
       MONGODB_URL:  mongodb://mongodb:27017
       REDIS_URL:    redis://redis:6379
     depends_on:

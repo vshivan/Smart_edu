@@ -1,4 +1,4 @@
-# SmartEduLearn — Requirements Breakdown
+# SmartEduMate — Requirements Breakdown
 
 ## Module 1: Auth System
 ### Features

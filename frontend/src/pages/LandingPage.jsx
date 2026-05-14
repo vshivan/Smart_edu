@@ -362,7 +362,7 @@ export default function LandingPage() {
                 <Zap size={15} className="text-white" />
               </div>
               <div>
-                <span className="font-bold text-text-primary dark:text-white">SmartEduLearn</span>
+                <span className="font-bold text-text-primary dark:text-white">SmartEduMate</span>
                 <p className="text-xs text-text-muted">AI-Powered Learning Platform</p>
               </div>
             </div>
@@ -370,7 +370,7 @@ export default function LandingPage() {
               <span className="flex items-center gap-1.5"><Shield size={13} /> Secure & Private</span>
               <span className="flex items-center gap-1.5"><TrendingUp size={13} /> Always improving</span>
             </div>
-            <p className="text-text-muted text-sm">© 2026 SmartEduLearn. All rights reserved.</p>
+            <p className="text-text-muted text-sm">© 2026 SmartEduMate. All rights reserved.</p>
           </div>
         </div>
       </footer>

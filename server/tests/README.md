@@ -1,4 +1,4 @@
-# 🧪 SmartEduLearn Test Suite
+# 🧪 SmartEduMate Test Suite
 
 Comprehensive API tests for all services — auth, courses, gamification, tutors, payments, notifications, admin.
 

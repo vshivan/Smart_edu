@@ -9,7 +9,7 @@ describe('🏥 Health & Infrastructure', () => {
     const res = await client.get('/health');
     expect(res.status).toBe(200);
     expect(res.data.status).toBe('ok');
-    expect(res.data.service).toBe('smartedulear-unified');
+    expect(res.data.service).toBe('smartedumate-unified');
     expect(res.data.timestamp).toBeDefined();
   });
 

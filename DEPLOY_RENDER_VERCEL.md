@@ -1,4 +1,4 @@
-# Deploy SmartEduLearn — Render (Backend) + Vercel (Frontend)
+# Deploy SmartEduMate — Render (Backend) + Vercel (Frontend)
 
 **Total time: ~30 minutes**
 **Cost: Free** (Render free tier + Vercel free tier + MongoDB Atlas free tier)
@@ -31,7 +31,7 @@ Render has no managed MongoDB, so we use Atlas free tier.
 ### Step 1.1 — Create Atlas account
 1. Go to [mongodb.com/atlas](https://www.mongodb.com/atlas) → **Try Free**
 2. Sign up → choose **Free (M0)** cluster → region: **Mumbai (ap-south-1)**
-3. Cluster name: `smartedulear`
+3. Cluster name: `smartedumate`
 
 ### Step 1.2 — Create database user
 1. **Database Access** → **Add New Database User**
@@ -48,10 +48,10 @@ Render has no managed MongoDB, so we use Atlas free tier.
 1. **Clusters** → **Connect** → **Drivers**
 2. Copy the connection string — looks like:
    ```
-   mongodb+srv://sel_user:<password>@smartedulear.xxxxx.mongodb.net/
+   mongodb+srv://sel_user:<password>@smartedumate.xxxxx.mongodb.net/
    ```
 3. Replace `<password>` with your actual password
-4. Add database name at end: `...mongodb.net/smartedulear_ai`
+4. Add database name at end: `...mongodb.net/smartedumate_ai`
 
 **Save this string** — you'll need it in Render.
 
@@ -76,9 +76,9 @@ Go to [render.com](https://render.com) → Sign up with GitHub
 2. Connect your GitHub repo
 3. Render will detect `render.yaml` automatically
 4. It will create:
-   - ✅ Web Service: `smartedulear-server`
-   - ✅ PostgreSQL: `smartedulear-postgres`
-   - ✅ Redis: `smartedulear-redis`
+   - ✅ Web Service: `smartedumate-server`
+   - ✅ PostgreSQL: `smartedumate-postgres`
+   - ✅ Redis: `smartedumate-redis`
 5. Click **Apply**
 
 ### Step 2.4 — Set environment variables
@@ -88,7 +88,7 @@ Set these variables (the ones marked `sync: false` in render.yaml):
 
 | Variable | Value |
 |----------|-------|
-| `MONGODB_URL` | `mongodb+srv://sel_user:PASSWORD@smartedulear.xxxxx.mongodb.net/smartedulear_ai` |
+| `MONGODB_URL` | `mongodb+srv://sel_user:PASSWORD@smartedumate.xxxxx.mongodb.net/smartedumate_ai` |
 | `FRONTEND_URL` | `https://your-app.vercel.app` *(set after Vercel deploy)* |
 | `ALLOWED_ORIGINS` | `https://your-app.vercel.app` *(set after Vercel deploy)* |
 | `GEMINI_API_KEY` | Your Gemini API key |
@@ -97,10 +97,10 @@ Set these variables (the ones marked `sync: false` in render.yaml):
 | `RAZORPAY_KEY_SECRET` | Your Razorpay secret |
 | `RAZORPAY_WEBHOOK_SECRET` | Your webhook secret |
 | `RESEND_API_KEY` | `re_...` |
-| `RESEND_FROM` | `SmartEduLearn <noreply@yourdomain.com>` |
+| `RESEND_FROM` | `SmartEduMate <noreply@yourdomain.com>` |
 | `GOOGLE_CLIENT_ID` | *(optional)* |
 | `GOOGLE_CLIENT_SECRET` | *(optional)* |
-| `GOOGLE_CALLBACK_URL` | `https://smartedulear-server.onrender.com/auth/google/callback` |
+| `GOOGLE_CALLBACK_URL` | `https://smartedumate-server.onrender.com/auth/google/callback` |
 | `PINECONE_API_KEY` | *(optional)* |
 
 ### Step 2.5 — Run database migration
@@ -113,11 +113,11 @@ After the service is live:
    Or it runs automatically on first deploy via the build command.
 
 ### Step 2.6 — Verify backend is live
-Visit: `https://smartedulear-server.onrender.com/health`
+Visit: `https://smartedumate-server.onrender.com/health`
 
 Should return:
 ```json
-{"status":"ok","service":"smartedulear-unified","timestamp":"..."}
+{"status":"ok","service":"smartedumate-unified","timestamp":"..."}
 ```
 
 > ⚠️ **Free tier note**: Render free services spin down after 15 minutes of inactivity.
@@ -144,14 +144,14 @@ In the **Environment Variables** section during import (or after in Settings):
 
 | Variable | Value |
 |----------|-------|
-| `VITE_API_URL` | `https://smartedulear-server.onrender.com` |
+| `VITE_API_URL` | `https://smartedumate-server.onrender.com` |
 
 > No trailing slash. This is your Render service URL.
 
 ### Step 3.4 — Deploy
 Click **Deploy** — Vercel builds and deploys in ~2 minutes.
 
-Your app will be live at: `https://smartedulear-XXXX.vercel.app`
+Your app will be live at: `https://smartedumate-XXXX.vercel.app`
 
 ### Step 3.5 — Add custom domain (optional)
 1. Vercel → Project → **Settings** → **Domains**
@@ -166,21 +166,21 @@ Go back to Render → Web Service → Environment → update:
 
 | Variable | Value |
 |----------|-------|
-| `FRONTEND_URL` | `https://smartedulear-XXXX.vercel.app` |
-| `ALLOWED_ORIGINS` | `https://smartedulear-XXXX.vercel.app` |
+| `FRONTEND_URL` | `https://smartedumate-XXXX.vercel.app` |
+| `ALLOWED_ORIGINS` | `https://smartedumate-XXXX.vercel.app` |
 
 Click **Save Changes** → Render redeploys automatically.
 
 ### Step 4.2 — Update Razorpay webhook URL
 Razorpay Dashboard → Settings → Webhooks → Add:
 ```
-https://smartedulear-server.onrender.com/payments/webhook
+https://smartedumate-server.onrender.com/payments/webhook
 ```
 
 ### Step 4.3 — Update Google OAuth callback (if using)
 Google Cloud Console → Credentials → OAuth Client → Authorized redirect URIs:
 ```
-https://smartedulear-server.onrender.com/auth/google/callback
+https://smartedumate-server.onrender.com/auth/google/callback
 ```
 
 ---
@@ -209,7 +209,7 @@ pool.query(\"UPDATE users SET role='admin', is_active=true WHERE email='your@ema
 - [ ] MongoDB Atlas cluster created and connection string saved
 - [ ] Render blueprint deployed (server + postgres + redis)
 - [ ] All env vars set in Render dashboard
-- [ ] `https://smartedulear-server.onrender.com/health` returns `{"status":"ok"}`
+- [ ] `https://smartedumate-server.onrender.com/health` returns `{"status":"ok"}`
 - [ ] Vercel project created with `frontend` as root directory
 - [ ] `VITE_API_URL` set in Vercel to your Render URL
 - [ ] `https://your-app.vercel.app` loads the app

@@ -1,7 +1,7 @@
 {
-  "name": "smartedulear-server",
+  "name": "smartedumate-server",
   "version": "1.0.0",
-  "description": "SmartEduLearn - Unified Backend Server",
+  "description": "SmartEduMate - Unified Backend Server",
   "main": "src/index.js",
   "scripts": {
     "dev": "nodemon src/index.js",

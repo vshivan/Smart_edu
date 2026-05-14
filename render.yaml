@@ -1,5 +1,5 @@
 # ════════════════════════════════════════════════════════════════════════════
-# SmartEduLearn — Render Blueprint
+# SmartEduMate — Render Blueprint
 # Deploys backend as a Web Service + managed Postgres + managed Redis
 # No Docker, no MongoDB — PostgreSQL only.
 #
@@ -12,7 +12,7 @@
 services:
   # ─── Backend Web Service ──────────────────────────────────────────────────
   - type: web
-    name: smartedulear-server
+    name: smartedumate-server
     runtime: node
     region: singapore          # closest to India
     plan: free                 # upgrade to Starter ($7/mo) for always-on
@@ -39,13 +39,13 @@ services:
       # ── Postgres (auto-linked from database below) ────────────────────────
       - key: DATABASE_URL
         fromDatabase:
-          name: smartedulear-postgres
+          name: smartedumate-postgres
           property: connectionString
 
       # ── Redis (auto-linked from service below) ────────────────────────────
       - key: REDIS_URL
         fromService:
-          name: smartedulear-redis
+          name: smartedumate-redis
           type: redis
           property: connectionString
 
@@ -67,7 +67,7 @@ services:
       - key: PINECONE_API_KEY
         sync: false
       - key: PINECONE_INDEX
-        value: smartedulear-courses
+        value: smartedumate-courses
 
       # ── Cashfree Payments ─────────────────────────────────────────────────
       - key: CASHFREE_APP_ID
@@ -90,24 +90,24 @@ services:
         sync: false
       - key: GOOGLE_CALLBACK_URL
         sync: false
-        # Value: https://smartedulear-server.onrender.com/auth/google/callback
+        # Value: https://smartedumate-server.onrender.com/auth/google/callback
 
       # ── Self-ping (Render sets this automatically) ────────────────────────
       - key: RENDER_EXTERNAL_URL
         sync: false
-        # Value: https://smartedulear-server.onrender.com
+        # Value: https://smartedumate-server.onrender.com
 
   # ─── Managed Redis ────────────────────────────────────────────────────────
   - type: redis
-    name: smartedulear-redis
+    name: smartedumate-redis
     region: singapore
     plan: free                  # 25MB RAM
     ipAllowList: []             # only accessible from Render internal network
 
 # ─── Managed PostgreSQL ───────────────────────────────────────────────────────
 databases:
-  - name: smartedulear-postgres
-    databaseName: smartedulear
+  - name: smartedumate-postgres
+    databaseName: smartedumate
     user: sel_user
     region: singapore
     plan: free                  # 1GB storage, 97 connection limit
