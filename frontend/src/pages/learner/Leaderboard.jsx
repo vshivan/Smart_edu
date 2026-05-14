@@ -9,7 +9,7 @@ export default function Leaderboard() {
   const { data, isLoading } = useQuery({
     queryKey: ['leaderboard'],
     queryFn: () => api.get('/gamification/leaderboard?limit=50').then(r => r.data.data),
-    refetchInterval: 30000,
+    refetchInterval: 120000,  // every 2 min instead of 30s
   });
 
   const entries = data || [];

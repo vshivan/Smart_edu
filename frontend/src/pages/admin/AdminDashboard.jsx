@@ -30,7 +30,7 @@ export default function AdminDashboard() {
   const { data, isLoading } = useQuery({
     queryKey: ['admin-dashboard'],
     queryFn: () => api.get('/admin/dashboard').then(r => r.data.data),
-    refetchInterval: 60000,
+    refetchInterval: 300000,  // every 5 min instead of 60s
   });
 
   const { data: analytics } = useQuery({

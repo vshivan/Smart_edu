@@ -58,9 +58,14 @@ const makeRefreshInterceptor = (instance) => {
           useAuthStore.getState().setTokens(newToken, data.data.refreshToken);
           return instance(original);
         } catch {
+          // Token refresh failed — clear auth state without hard reload
+          // React Router will handle the redirect via ProtectedRoute
           const { useAuthStore } = await import('../store/authStore');
           useAuthStore.getState().logout();
-          window.location.href = '/login';
+          // Use soft navigation — avoids full page reload
+          if (window.location.pathname !== '/login') {
+            window.location.replace('/login');
+          }
         }
       }
       return Promise.reject(err);

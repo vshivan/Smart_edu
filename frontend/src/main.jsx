@@ -10,7 +10,14 @@ import { useThemeStore } from './store/themeStore';
 import './index.css';
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 1, staleTime: 5 * 60 * 1000 } },
+  defaultOptions: {
+    queries: {
+      retry:                1,
+      staleTime:            5 * 60 * 1000,  // 5 min — don't refetch if data is fresh
+      refetchOnWindowFocus: false,           // FIX: stop refetching on tab switch (main cause of "refresh" feel)
+      refetchOnReconnect:   true,            // still refetch when internet reconnects
+    },
+  },
 });
 
 function Root() {

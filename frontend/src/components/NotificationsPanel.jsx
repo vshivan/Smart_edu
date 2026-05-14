@@ -42,7 +42,7 @@ export default function NotificationsPanel() {
   const { data: notifs = [] } = useQuery({
     queryKey: ['notifications'],
     queryFn: () => api.get('/notifications').then(r => r.data.data || []),
-    refetchInterval: 30000,
+    refetchInterval: 60000,   // every 60s instead of 30s
   });
 
   const unread = notifs.filter(n => !n.is_read).length;
