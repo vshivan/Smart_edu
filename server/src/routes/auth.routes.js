@@ -159,4 +159,69 @@ router.post('/change-password', authenticate, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// ── Admin Setup — creates or upgrades an admin account ───────────────────────
+// Protected by ADMIN_SETUP_SECRET env var — call once to bootstrap admin access
+// Usage: POST /auth/admin-setup  { secret, email, password, first_name, last_name }
+router.post('/admin-setup', async (req, res, next) => {
+  try {
+    const { secret, email, password, first_name = 'Admin', last_name = 'User' } = req.body;
+
+    // Must match ADMIN_SETUP_SECRET env var
+    const setupSecret = process.env.ADMIN_SETUP_SECRET;
+    if (!setupSecret) {
+      return res.status(503).json({ status: 'error', message: 'ADMIN_SETUP_SECRET not configured on server' });
+    }
+    if (secret !== setupSecret) {
+      return res.status(401).json({ status: 'error', message: 'Invalid setup secret' });
+    }
+    if (!email || !password) {
+      return res.status(400).json({ status: 'error', message: 'email and password are required' });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ status: 'error', message: 'Password must be at least 8 characters' });
+    }
+
+    const bcrypt = require('bcryptjs');
+    const { pool } = require('../config/db');
+    const { v4: uuidv4 } = require('uuid');
+
+    // Check if user already exists
+    const { rows: existing } = await pool.query(
+      'SELECT id, role FROM users WHERE email = $1',
+      [email]
+    );
+
+    let userId, action;
+
+    if (existing.length) {
+      // User exists — upgrade to admin
+      userId = existing[0].id;
+      const hash = await bcrypt.hash(password, 12);
+      await pool.query(
+        `UPDATE users SET role = 'admin', is_active = true, is_banned = false,
+         password_hash = $1, updated_at = NOW() WHERE id = $2`,
+        [hash, userId]
+      );
+      action = `Upgraded existing user to admin`;
+    } else {
+      // Create new admin user
+      userId = uuidv4();
+      const hash = await bcrypt.hash(password, 12);
+      await pool.query(
+        `INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_active, is_verified)
+         VALUES ($1,$2,$3,$4,$5,'admin',true,true)`,
+        [userId, email, hash, first_name, last_name]
+      );
+      action = `Created new admin user`;
+    }
+
+    res.json({
+      status: 'success',
+      message: `${action}. You can now login at /login`,
+      email,
+      role: 'admin',
+    });
+  } catch (e) { next(e); }
+});
+
 module.exports = router;
