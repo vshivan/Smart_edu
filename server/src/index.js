@@ -257,6 +257,33 @@ async function runMigrations() {
         name: '005_add_notes_to_lesson_progress',
         sql: `ALTER TABLE lesson_progress ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT '';`,
       },
+      {
+        // Seed default admin account — idempotent (only runs if email doesn't exist)
+        name: '006_seed_admin_user',
+        sql: `
+          DO $$
+          DECLARE
+            admin_id UUID;
+          BEGIN
+            -- Skip if admin already exists
+            IF EXISTS (SELECT 1 FROM users WHERE email = 'admin2@smartedulear.com') THEN
+              -- Just make sure they are admin and active
+              UPDATE users SET role = 'admin', is_active = true, is_banned = false
+              WHERE email = 'admin2@smartedulear.com';
+            ELSE
+              -- Create fresh admin user (password = Admin@123, bcrypt hash)
+              admin_id := gen_random_uuid();
+              INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_active, is_verified)
+              VALUES (
+                admin_id,
+                'admin2@smartedulear.com',
+                '$2a$12$nwgKJTEidXiJRosw0SEDy.1EDd5OVAaHY1zTG6xHD5enZa/E2uUim',
+                'Admin', 'User', 'admin', true, true
+              );
+            END IF;
+          END $$;
+        `,
+      },
     ];
 
     const { rows } = await pool.query('SELECT filename FROM schema_migrations');
